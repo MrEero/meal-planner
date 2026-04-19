@@ -69,7 +69,7 @@
     .pp-tabular{font-variant-numeric:tabular-nums}
 
     /* ——— Day column ——— */
-    .pp-day-name{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:34px;line-height:.95;letter-spacing:-0.01em;font-weight:400;color:var(--ink)}
+    .pp-day-name{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:34px;line-height:.95;letter-spacing:0.035em;font-weight:400;color:var(--ink)}
     .pp-day-name.today{color:var(--accent)}
     .pp-day-date{color:var(--muted);font-size:10.5px;font-variant-numeric:tabular-nums;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin-top:6px}
     .pp-day-sum{display:inline-flex;align-items:baseline;gap:4px;padding:4px 10px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums;font-weight:500}
@@ -346,7 +346,7 @@ function MealPlanner(){
         <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"24px",alignItems:"end",marginBottom:"28px"}}>
           <div>
             <div className="pp-eyebrow" style={{marginBottom:"12px"}}>{DAYS_ET[0]} – {DAYS_ET[4]} · {dateRange}</div>
-            <h1 className="serif" style={{fontSize:"clamp(36px,5vw,58px)",lineHeight:1.05,letterSpacing:"-0.02em",margin:0}}>Nädala <em style={{fontStyle:"italic",color:"var(--accent)"}}>menüü</em></h1>
+            <h1 className="serif" style={{fontSize:"clamp(36px,5vw,58px)",lineHeight:1.05,letterSpacing:"0.025em",margin:0}}>Nädala <em style={{fontStyle:"italic",color:"var(--accent)"}}>menüü</em></h1>
             <div style={{display:"flex",gap:"22px",color:"var(--muted)",fontSize:"14px",marginTop:"14px",flexWrap:"wrap",alignItems:"center"}}>
               {FAMILY.map(m=>(
                 <div key={m.name} style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
@@ -396,7 +396,7 @@ function MealPlanner(){
           </button>
         </div>
 
-        {view==="rules"?<RulesPanel rules={allRules} onToggle={toggleRule} onAdd={addCustomRule} onRemove={removeCustomRule} />
+        {view==="rules"?<><RulesPanel rules={allRules} onToggle={toggleRule} onAdd={addCustomRule} onRemove={removeCustomRule} /><ExtensionStatusCard/></>
         :view==="menu"?<WeeklyMenuView plan={plan} getR={getR} getCost={getCost} dailyKcals={dailyKcals} weeklyAvg={weeklyAvg} dateRange={dateRange} budgetMode={budgetMode} onSwap={(d,t)=>{setSwapDay(d);setSwapType(t);}} onViewRecipe={setViewRecipe} />
         :view==="saved"?<SavedMenusPanel savedMenus={savedMenus} onLoad={sp=>{loadSavedMenu(sp);setView("edit");}} onDelete={deleteSavedMenu} getR={getR} onImport={importMenus} onExport={exportMenus} />
         :view==="shop"?<ShoppingListPanel items={shoppingList} />
@@ -528,6 +528,50 @@ function SwapPanel({options,currentRecipeId,onSelect,onClose,mealType}){
           })}
           {filtered.length===0&&<p className="pp-muted" style={{textAlign:"center",padding:"32px 0",fontStyle:"italic"}}>Ei leidnud retsepte</p>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ExtensionStatusCard(){
+  const [ready,setReady]=useState(false);
+  const [ver,setVer]=useState("");
+  useEffect(()=>{
+    const handler=(e)=>{
+      if(e.source!==window) return;
+      const d=e.data;
+      if(!d||d.source!=="pp-ext") return;
+      if(d.type==="READY"||d.type==="PONG"){setReady(true);if(d.version)setVer(d.version);}
+      else if(d.type==="GONE"){setReady(false);}
+    };
+    window.addEventListener("message",handler);
+    try{window.postMessage({source:"pp-planner",type:"PING"},"*");}catch{}
+    return()=>window.removeEventListener("message",handler);
+  },[]);
+  return(
+    <div className="pp-card" style={{overflow:"hidden",marginTop:"20px"}}>
+      <div style={{padding:"20px 28px",borderBottom:"1px solid var(--line)",background:"var(--surface-2)",display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:"10px",flexWrap:"wrap"}}>
+        <div>
+          <div className="pp-eyebrow">Chrome laiendus</div>
+          <h2 className="serif" style={{fontSize:"24px",letterSpacing:"-0.01em",margin:"4px 0 0"}}>Prisma ostuabi</h2>
+        </div>
+        <span className="pp-chip pp-tabular" style={{background:ready?"var(--accent-soft)":"var(--surface)",color:ready?"var(--accent)":"var(--muted)"}}>{ready?`installitud${ver?" · v"+ver:""}`:"pole leitud"}</span>
+      </div>
+      <div style={{padding:"20px 28px",fontSize:"13px",color:"var(--ink-2)",lineHeight:1.55}}>
+        {ready?(
+          <p style={{margin:0}}>Laiendus on aktiivne. Ava <em>Ostunimekiri</em> ja vajuta <em>Lisa otse ostukorvi</em>. Laiendus avab Prisma otsingu iga toote jaoks, lisab esimese tulemuse korvi ja sulgeb saki. Kontrolli korvi enne tellimist — alati võib vale toode esikohal olla.</p>
+        ):(
+          <>
+            <p style={{margin:"0 0 10px"}}>Laiendus pole veel paigaldatud. See on pisike tööriist, mis elab sinu enda Chrome-is, kasutab sinu Prisma sisselogimist ja lisab tooteid korvi. Ei mingit backendi ega API võtit.</p>
+            <ol style={{margin:"0 0 0 18px",padding:0}}>
+              <li>Laadi alla repost kaust <code style={{background:"var(--surface-2)",padding:"1px 5px",borderRadius:"4px",fontSize:"12px"}}>prisma-extension/</code></li>
+              <li>Ava Chrome-is <code style={{background:"var(--surface-2)",padding:"1px 5px",borderRadius:"4px",fontSize:"12px"}}>chrome://extensions/</code> ja lülita <em>Developer mode</em> sisse</li>
+              <li>Vajuta <em>Load unpacked</em> ja vali laaditud kaust</li>
+              <li>Logi Chrome-is Prisma Marketisse sisse</li>
+              <li>Tule sellele lehele tagasi ja värskenda (Cmd/Ctrl+R)</li>
+            </ol>
+          </>
+        )}
       </div>
     </div>
   );
@@ -848,13 +892,104 @@ function SavedMenusPanel({savedMenus,onLoad,onDelete,getR,onImport,onExport}){
   );
 }
 
+// Prisma Market helpers. The meal planner can talk to a Chrome extension that
+// lives at /prisma-extension/ — when installed, it drives prismamarket.ee
+// using the user's own logged-in session. Without the extension, we fall back
+// to opening search tabs for each item.
+const PRISMA_SEARCH="https://www.prismamarket.ee/search?q=";
+function normalizeForSearch(name){return name.split(/[,(]/)[0].trim().toLowerCase();}
+function prismaUrl(name,organic){const q=normalizeForSearch(name)+(organic?" mahe":"");return PRISMA_SEARCH+encodeURIComponent(q);}
+
+function PrismaAssistant({items,checked,onToggle,onClose,preferOrganic,setPreferOrganic}){
+  const [extReady,setExtReady]=useState(false);
+  const [progress,setProgress]=useState({running:false,done:0,failed:0,queued:0,lastMessage:""});
+  useEffect(()=>{
+    const handler=(e)=>{
+      if(e.source!==window) return;
+      const d=e.data;
+      if(!d||d.source!=="pp-ext") return;
+      if(d.type==="READY"||d.type==="PONG"){setExtReady(true);}
+      else if(d.type==="GONE"){setExtReady(false);}
+      else if(d.type==="STATUS"){setProgress({running:!!d.running,queued:d.queued||0,done:d.stats?.done||0,failed:d.stats?.failed||0,lastMessage:d.stats?.lastMessage||""});}
+      else if(d.type==="ITEM_DONE"){if(d.ok&&d.item?.name){onToggle(d.item.name);}}
+      else if(d.type==="DONE"){setProgress(p=>({...p,running:false,lastMessage:d.stats?.lastMessage||"Valmis."}));}
+    };
+    window.addEventListener("message",handler);
+    try{window.postMessage({source:"pp-planner",type:"PING"},"*");}catch{}
+    return()=>window.removeEventListener("message",handler);
+  },[onToggle]);
+  const sendToExtension=()=>{
+    const payload=items.map(i=>({name:normalizeForSearch(i.name),organic:preferOrganic}));
+    window.postMessage({source:"pp-planner",type:"ADD_ITEMS",items:payload,preferOrganic},"*");
+  };
+  const openAll=()=>{const batch=items.slice(0,20);batch.forEach(item=>window.open(prismaUrl(item.name,preferOrganic),"_blank","noopener,noreferrer"));};
+  return(
+    <div className="pp-overlay" onClick={onClose}>
+      <div className="pp-modal" onClick={e=>e.stopPropagation()} style={{maxWidth:"720px"}}>
+        <div className="pp-modal-head">
+          <div>
+            <div className="pp-eyebrow">Ostukorv</div>
+            <h3 className="pp-modal-title" style={{marginTop:"2px"}}>Telli Prismast</h3>
+          </div>
+          <button onClick={onClose} className="pp-icon-btn" style={{width:"34px",height:"34px"}}><X_ className="w-4 h-4"/></button>
+        </div>
+        <div className="pp-modal-body pp-scroll">
+          <div style={{background:extReady?"var(--accent-soft)":"var(--surface-2)",borderRadius:"12px",padding:"14px 16px",marginBottom:"14px",fontSize:"13px",color:"var(--ink-2)",lineHeight:1.5,border:extReady?"none":"1px dashed var(--line-strong)"}}>
+            {extReady?(<><strong style={{color:"var(--ink)"}}>Chrome laiendus leitud.</strong> Klõpsa <em>Lisa otse ostukorvi</em> ja laiendus avab Prisma otsingu iga toote jaoks, lisab esimese tulemuse korvi ja sulgeb saki. Kui <em>Eelista mahe</em> on sees, eelistatakse maheetiketiga tooteid.</>):(<><strong style={{color:"var(--ink)"}}>Chrome laiendus puudu.</strong> Paigalda <code style={{background:"var(--surface)",padding:"1px 5px",borderRadius:"4px",fontSize:"12px"}}>prisma-extension/</code> kaust (juhis README-s) ja laadi see leht uuesti. Seniks saad kasutada <em>Ava sakkidesse</em> varianti allpool.</>)}
+          </div>
+          {progress.running&&(
+            <div style={{background:"var(--surface-2)",border:"1px solid var(--line)",borderRadius:"10px",padding:"12px 14px",marginBottom:"14px",fontSize:"12px",color:"var(--ink-2)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                <span style={{fontWeight:600,color:"var(--ink)"}}>Töös</span>
+                <span className="pp-tabular">{progress.done} lisatud · {progress.failed} vahele · {progress.queued} järjekorras</span>
+              </div>
+              <div style={{marginTop:"6px",fontStyle:"italic"}}>{progress.lastMessage}</div>
+            </div>
+          )}
+          <div style={{display:"flex",gap:"10px",alignItems:"center",marginBottom:"18px",flexWrap:"wrap"}}>
+            <button onClick={sendToExtension} className="pp-btn pp-btn-dark" style={{padding:"9px 14px",fontSize:"13px"}} disabled={!extReady||items.length===0||progress.running}><ShoppingCart className="w-3.5 h-3.5"/>Lisa otse ostukorvi · {items.length}</button>
+            <button onClick={openAll} className="pp-btn pp-btn-outline" style={{padding:"9px 14px",fontSize:"13px"}} disabled={items.length===0}>Ava sakkidesse ({Math.min(items.length,20)})</button>
+            <label style={{display:"inline-flex",alignItems:"center",gap:"8px",cursor:"pointer",fontSize:"13px",color:"var(--ink-2)",marginLeft:"auto"}}>
+              <div onClick={()=>setPreferOrganic(v=>!v)} className={`pp-switch ${preferOrganic?"on":""}`}/>
+              Eelista mahe tooteid
+            </label>
+          </div>
+          {items.length===0?(
+            <p className="pp-muted" style={{fontStyle:"italic",fontSize:"14px",textAlign:"center",padding:"30px 0"}}>Kõik on juba ostetud.</p>
+          ):(
+            <div style={{display:"flex",flexDirection:"column"}}>
+              {items.map((item,idx)=>(
+                <div key={item.name} style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 4px",borderBottom:idx<items.length-1?"1px dashed var(--line)":"none"}}>
+                  <div onClick={()=>onToggle(item.name)} title="Märgi ostetuks" style={{width:"20px",height:"20px",borderRadius:"4px",border:"1px solid var(--line-strong)",background:"transparent",display:"grid",placeItems:"center",flexShrink:0,cursor:"pointer",transition:"all .15s"}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{color:"var(--ink)",fontSize:"14px",fontWeight:500}}>{item.name}</div>
+                    <div className="pp-muted" style={{fontSize:"11px",marginTop:"2px"}}>{typeof item.quantity==="number"?item.unit==="tk"?item.quantity:item.quantity.toFixed(1):item.quantity} {item.unit}</div>
+                  </div>
+                  <a href={prismaUrl(item.name,preferOrganic)} target="_blank" rel="noopener noreferrer" className="pp-btn pp-btn-outline" style={{padding:"6px 12px",fontSize:"12px"}}>Otsi Prismas<ExternalLink className="w-3 h-3"/></a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ShoppingListPanel({items}){
-  const [checked,setChecked]=useState({});
-  const [extras,setExtras]=useState([]);
+  // Persist checked state, manually added extras, and organic preference in localStorage
+  const [checked,setChecked]=useState(()=>{try{const s=localStorage.getItem("pp.shopping.checked");return s?JSON.parse(s):{};}catch{return {};}});
+  const [extras,setExtras]=useState(()=>{try{const s=localStorage.getItem("pp.shopping.extras");return s?JSON.parse(s):[];}catch{return [];}});
+  const [preferOrganic,setPreferOrganic]=useState(()=>{try{const s=localStorage.getItem("pp.shopping.organic");return s===null?true:s==="true";}catch{return true;}});
   const [newItem,setNewItem]=useState("");
+  const [assistOpen,setAssistOpen]=useState(false);
+  useEffect(()=>{try{localStorage.setItem("pp.shopping.checked",JSON.stringify(checked));}catch{}},[checked]);
+  useEffect(()=>{try{localStorage.setItem("pp.shopping.extras",JSON.stringify(extras));}catch{}},[extras]);
+  useEffect(()=>{try{localStorage.setItem("pp.shopping.organic",String(preferOrganic));}catch{}},[preferOrganic]);
   const toggle=name=>setChecked(p=>({...p,[name]:!p[name]}));
   const allItems=[...items,...extras];
   const checkedCount=Object.values(checked).filter(Boolean).length;
+  const uncheckedItems=allItems.filter(i=>!checked[i.name]);
   const cats=["Liha ja kala","Piimatooted","Puu- ja köögivili","Maiustused","Muu"];
   const grouped=cats.map(cat=>({cat,items:allItems.filter(i=>i.category===cat)})).filter(g=>g.items.length>0);
   const addExtra=()=>{if(!newItem.trim())return;setExtras(p=>[...p,{name:newItem.trim(),quantity:1,unit:"tk",meals:["käsitsi"],category:"Muu"}]);setNewItem("");};
@@ -872,6 +1007,16 @@ function ShoppingListPanel({items}){
             <span className="pp-chip pp-tabular">{allItems.length} toodet</span>
           </div>
         </div>
+      </div>
+      <div style={{padding:"16px 28px",borderBottom:"1px solid var(--line)",display:"flex",gap:"12px",alignItems:"center",flexWrap:"wrap",background:"var(--surface)"}}>
+        <button onClick={()=>setAssistOpen(true)} className="pp-btn pp-btn-dark" style={{padding:"9px 14px",fontSize:"13px"}} disabled={uncheckedItems.length===0}>
+          <ShoppingCart className="w-3.5 h-3.5"/>Telli Prismast · {uncheckedItems.length}
+        </button>
+        <label style={{display:"inline-flex",alignItems:"center",gap:"8px",cursor:"pointer",fontSize:"13px",color:"var(--ink-2)"}}>
+          <div onClick={()=>setPreferOrganic(v=>!v)} className={`pp-switch ${preferOrganic?"on":""}`}/>
+          Eelista mahe tooteid
+        </label>
+        <span className="pp-muted" style={{fontSize:"11px",fontStyle:"italic",marginLeft:"auto"}}>märkeruudud salvestatakse brauserisse</span>
       </div>
       <div style={{padding:"8px 28px"}}>
         {grouped.map(g=>(
@@ -891,6 +1036,7 @@ function ShoppingListPanel({items}){
                     </div>
                     <div className="pp-muted" style={{fontSize:"11px",marginTop:"2px"}}>{item.meals.join(" · ")}</div>
                   </div>
+                  <a href={prismaUrl(item.name,preferOrganic)} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} className="pp-icon-btn" title="Otsi Prismas" style={{width:"26px",height:"26px",color:"var(--muted)"}}><ExternalLink className="w-3 h-3"/></a>
                   <div className="pp-tabular serif" style={{fontSize:"16px",color:"var(--ink)",whiteSpace:"nowrap"}}>{typeof item.quantity==="number"?item.unit==="tk"?item.quantity:item.quantity.toFixed(1):item.quantity} <span className="pp-muted" style={{fontSize:"12px",fontFamily:"'Inter',sans-serif",fontStyle:"normal"}}>{item.unit}</span></div>
                 </div>
               );})}
@@ -909,6 +1055,7 @@ function ShoppingListPanel({items}){
         <span className="pp-muted" style={{fontSize:"12px"}}>{allItems.length} koostisosa · 2 inimese kohta</span>
         {checkedCount>0&&<button onClick={()=>setChecked({})} className="pp-btn pp-btn-ghost" style={{padding:"6px 12px",fontSize:"12px"}}>Tühjenda valikud</button>}
       </div>
+      {assistOpen&&<PrismaAssistant items={uncheckedItems} checked={checked} onToggle={toggle} onClose={()=>setAssistOpen(false)} preferOrganic={preferOrganic} setPreferOrganic={setPreferOrganic}/>}
     </div>
   );
 }
