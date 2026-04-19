@@ -102,6 +102,12 @@
     .pp-cost.mid .cd{background:#D9B25C}
     .pp-cost.exp .cd{background:var(--accent)}
 
+    /* ——— Toast ——— */
+    .pp-toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:var(--bg);padding:11px 18px 11px 14px;border-radius:999px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;box-shadow:0 12px 36px -10px rgba(31,29,26,.45);z-index:80;opacity:0;animation:pp-toast-in .25s ease-out forwards,pp-toast-out .35s ease-in 2.2s forwards}
+    .pp-toast-err{background:#a23a2a}
+    @keyframes pp-toast-in{to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    @keyframes pp-toast-out{to{opacity:0;transform:translateX(-50%) translateY(8px)}}
+
     /* ——— Overlay / modals ——— */
     .pp-overlay{position:fixed;inset:0;background:rgba(31,29,26,.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
     .pp-modal{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 80px -20px rgba(31,29,26,.25);max-width:640px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
@@ -249,6 +255,9 @@ function MealPlanner(){
   const [swapDay,setSwapDay]=useState(null);
   const [swapType,setSwapType]=useState(null);
   const [viewRecipe,setViewRecipe]=useState(null);
+  const [toast,setToast]=useState(null);
+  useEffect(()=>{if(!toast)return;const id=setTimeout(()=>setToast(null),2600);return()=>clearTimeout(id);},[toast]);
+  const showToast=useCallback((message,kind="ok")=>setToast({message,kind,id:Date.now()}),[]);
 
   const pickFromPool=useCallback((pool,used)=>{const av=pool.filter(r=>!used.has(r.id));const src=av.length>0?av:pool;return src[Math.floor(Math.random()*src.length)].id;},[]);
 
@@ -279,7 +288,8 @@ function MealPlanner(){
   const saveCurrentMenu=useCallback(()=>{
     const now=new Date();
     setSavedMenus(p=>[{id:Date.now(),label:dateRange,savedAt:now.toLocaleDateString("et-EE")+" "+now.toLocaleTimeString("et-EE",{hour:"2-digit",minute:"2-digit"}),plan:{breakfasts:[...plan.breakfasts],dinners:[...plan.dinners]}},...p]);
-  },[plan,dateRange]);
+    showToast("Menüü salvestatud");
+  },[plan,dateRange,showToast]);
   const loadSavedMenu=useCallback(sp=>{setPlan({breakfasts:[...sp.breakfasts],dinners:[...sp.dinners]});},[]);
   const deleteSavedMenu=useCallback(id=>{setSavedMenus(p=>p.filter(m=>m.id!==id));},[]);
   const importMenus=useCallback(json=>{try{const data=JSON.parse(json);if(Array.isArray(data)){setSavedMenus(data);return true;}return false;}catch{return false;}},[]);
@@ -441,6 +451,12 @@ function MealPlanner(){
 
         {swapDay!==null&&<SwapPanel options={swapOptions} currentRecipeId={swapType==="breakfast"?plan.breakfasts[swapDay]:swapType==="lunch"?plan.dinners[swapDay]:plan.dinners[swapDay+1]} onSelect={swapMeal} onClose={()=>{setSwapDay(null);setSwapType(null);}} mealType={swapType} />}
         {viewRecipe!==null&&<RecipeDetailPanel recipe={getR(viewRecipe)} onClose={()=>setViewRecipe(null)} />}
+        {toast&&(
+          <div key={toast.id} className={`pp-toast pp-toast-${toast.kind}`}>
+            <Check className="w-4 h-4"/>
+            <span>{toast.message}</span>
+          </div>
+        )}
       </div>
 
       <style>{`
@@ -922,6 +938,9 @@ function PrismaAssistant({items,checked,onToggle,onClose,preferOrganic,setPrefer
     const payload=items.map(i=>({name:normalizeForSearch(i.name),organic:preferOrganic}));
     window.postMessage({source:"pp-planner",type:"ADD_ITEMS",items:payload,preferOrganic},"*");
   };
+  const stopExtension=()=>{
+    window.postMessage({source:"pp-planner",type:"STOP"},"*");
+  };
   const openAll=()=>{const batch=items.slice(0,20);batch.forEach(item=>window.open(prismaUrl(item.name,preferOrganic),"_blank","noopener,noreferrer"));};
   return(
     <div className="pp-overlay" onClick={onClose}>
@@ -935,7 +954,7 @@ function PrismaAssistant({items,checked,onToggle,onClose,preferOrganic,setPrefer
         </div>
         <div className="pp-modal-body pp-scroll">
           <div style={{background:extReady?"var(--accent-soft)":"var(--surface-2)",borderRadius:"12px",padding:"14px 16px",marginBottom:"14px",fontSize:"13px",color:"var(--ink-2)",lineHeight:1.5,border:extReady?"none":"1px dashed var(--line-strong)"}}>
-            {extReady?(<><strong style={{color:"var(--ink)"}}>Chrome laiendus leitud.</strong> Klõpsa <em>Lisa otse ostukorvi</em> ja laiendus avab Prisma otsingu iga toote jaoks, lisab esimese tulemuse korvi ja sulgeb saki. Kui <em>Eelista mahe</em> on sees, eelistatakse maheetiketiga tooteid.</>):(<><strong style={{color:"var(--ink)"}}>Chrome laiendus puudu.</strong> Paigalda <code style={{background:"var(--surface)",padding:"1px 5px",borderRadius:"4px",fontSize:"12px"}}>prisma-extension/</code> kaust (juhis README-s) ja laadi see leht uuesti. Seniks saad kasutada <em>Ava sakkidesse</em> varianti allpool.</>)}
+            {extReady?(<><strong style={{color:"var(--ink)"}}>Chrome laiendus leitud.</strong> Klõpsa <em>Lisa otse ostukorvi</em>. Avaneb üks Prisma sakk, kus laiendus otsib iga toodet sinu sisselogitud kontoga ja lisab esimese sobiva tulemuse korvi. Saad protsessi <em>Peata</em> nupuga igal ajal lõpetada.</>):(<><strong style={{color:"var(--ink)"}}>Chrome laiendus puudu.</strong> Paigalda <code style={{background:"var(--surface)",padding:"1px 5px",borderRadius:"4px",fontSize:"12px"}}>prisma-extension/</code> kaust (juhis README-s) ja laadi see leht uuesti. Seniks saad kasutada <em>Ava sakkidesse</em> varianti allpool.</>)}
           </div>
           {progress.running&&(
             <div style={{background:"var(--surface-2)",border:"1px solid var(--line)",borderRadius:"10px",padding:"12px 14px",marginBottom:"14px",fontSize:"12px",color:"var(--ink-2)"}}>
@@ -947,8 +966,12 @@ function PrismaAssistant({items,checked,onToggle,onClose,preferOrganic,setPrefer
             </div>
           )}
           <div style={{display:"flex",gap:"10px",alignItems:"center",marginBottom:"18px",flexWrap:"wrap"}}>
-            <button onClick={sendToExtension} className="pp-btn pp-btn-dark" style={{padding:"9px 14px",fontSize:"13px"}} disabled={!extReady||items.length===0||progress.running}><ShoppingCart className="w-3.5 h-3.5"/>Lisa otse ostukorvi · {items.length}</button>
-            <button onClick={openAll} className="pp-btn pp-btn-outline" style={{padding:"9px 14px",fontSize:"13px"}} disabled={items.length===0}>Ava sakkidesse ({Math.min(items.length,20)})</button>
+            {progress.running?(
+              <button onClick={stopExtension} className="pp-btn" style={{padding:"9px 14px",fontSize:"13px",background:"#a23a2a",color:"#fff",border:"1px solid #a23a2a"}}><X_ className="w-3.5 h-3.5"/>Peata</button>
+            ):(
+              <button onClick={sendToExtension} className="pp-btn pp-btn-dark" style={{padding:"9px 14px",fontSize:"13px"}} disabled={!extReady||items.length===0}><ShoppingCart className="w-3.5 h-3.5"/>Lisa otse ostukorvi · {items.length}</button>
+            )}
+            <button onClick={openAll} className="pp-btn pp-btn-outline" style={{padding:"9px 14px",fontSize:"13px"}} disabled={items.length===0||progress.running}>Ava sakkidesse ({Math.min(items.length,20)})</button>
             <label style={{display:"inline-flex",alignItems:"center",gap:"8px",cursor:"pointer",fontSize:"13px",color:"var(--ink-2)",marginLeft:"auto"}}>
               <div onClick={()=>setPreferOrganic(v=>!v)} className={`pp-switch ${preferOrganic?"on":""}`}/>
               Eelista mahe tooteid
