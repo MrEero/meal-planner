@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Perekonna Ostuabi",
+  "version": "0.1.0",
+  "description": "Lisab Perekonna Toiduplaani ostunimekirja Prisma Marketi ostukorvi.",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": [
+    "https://www.prismamarket.ee/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.prismamarket.ee/*"],
+      "js": ["content-prisma.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mreero.github.io/meal-planner/*",
+        "https://mreero.github.io/meal-planner"
+      ],
+      "js": ["content-planner.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Perekonna Ostuabi"
+  }
+}
