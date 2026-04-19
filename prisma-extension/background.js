@@ -1,33 +1,30 @@
 // Perekonna Ostuabi — background service worker
 //
-// Receives shopping items from the meal planner page (via content-planner.js),
-// opens Prisma Market search tabs one at a time, asks content-prisma.js to add
-// the top result to the cart, closes the tab, and moves on.
-//
-// State is kept in chrome.storage.session so the popup can show progress.
+// Keeps ONE prismamarket.ee tab open and reuses it. For each item in the
+// queue, we ask the content script to type the query into Prisma's own
+// search input, wait for results, and click "Lisa ostukorvi" on the top
+// matching product. No URL guessing, no tab churn.
 
-const PRISMA_SEARCH = "https://www.prismamarket.ee/search?q=";
-const ITEM_TIMEOUT_MS = 20000;   // how long we wait for a single add-to-cart
-const BETWEEN_MS_MIN = 600;      // small pause between items so we look human
-const BETWEEN_MS_MAX = 1200;
+const PRISMA_HOME = "https://www.prismamarket.ee/";
+const ITEM_TIMEOUT_MS = 25000;
+const BETWEEN_MS_MIN = 700;
+const BETWEEN_MS_MAX = 1400;
 
 let queue = [];
 let running = false;
+let stopRequested = false;
 let stats = { total: 0, done: 0, failed: 0, lastMessage: "" };
-let lastClient = null; // { tabId, frameId } of the planner tab so we can reply
+let prismaTabId = null;
+let lastClient = null;
 
 async function saveStats() {
-  try { await chrome.storage.session.set({ stats, queueLength: queue.length, running }); }
-  catch (e) { /* ignore */ }
+  try {
+    await chrome.storage.session.set({ stats, queueLength: queue.length, running });
+  } catch {}
 }
 
-function rand(min, max) { return min + Math.floor(Math.random() * (max - min)); }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-function buildUrl(item) {
-  const q = (item.organic ? item.name + " mahe" : item.name);
-  return PRISMA_SEARCH + encodeURIComponent(q);
-}
+function rand(a, b) { return a + Math.floor(Math.random() * (b - a)); }
 
 function notifyPlanner(payload) {
   if (!lastClient) return;
@@ -35,52 +32,63 @@ function notifyPlanner(payload) {
   chrome.tabs.sendMessage(lastClient.tabId, msg).catch(() => {});
 }
 
-async function processOne(item) {
-  const url = buildUrl(item);
-  let tab;
-  try {
-    tab = await chrome.tabs.create({ url, active: false });
-  } catch (e) {
-    return { ok: false, reason: "tab_create_failed: " + e.message };
-  }
-
-  // Wait until the tab finishes loading.
-  const loaded = await new Promise(resolve => {
-    let done = false;
-    const listener = (tabId, info) => {
-      if (tabId === tab.id && info.status === "complete") {
-        if (done) return;
-        done = true;
-        chrome.tabs.onUpdated.removeListener(listener);
-        resolve(true);
+async function ensurePrismaTab() {
+  if (prismaTabId != null) {
+    try {
+      const t = await chrome.tabs.get(prismaTabId);
+      if (t && typeof t.url === "string" && t.url.includes("prismamarket.ee")) {
+        return t;
       }
-    };
-    chrome.tabs.onUpdated.addListener(listener);
-    setTimeout(() => {
+    } catch {
+      prismaTabId = null;
+    }
+  }
+  const tab = await chrome.tabs.create({ url: PRISMA_HOME, active: false });
+  prismaTabId = tab.id;
+  await waitForTabComplete(prismaTabId);
+  // Give the SPA a beat to mount its UI.
+  await sleep(800);
+  return tab;
+}
+
+function waitForTabComplete(tabId) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (ok) => {
       if (done) return;
       done = true;
       chrome.tabs.onUpdated.removeListener(listener);
-      resolve(false);
-    }, ITEM_TIMEOUT_MS);
+      resolve(ok);
+    };
+    const listener = (id, info) => {
+      if (id === tabId && info.status === "complete") finish(true);
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    (async () => {
+      try {
+        const t = await chrome.tabs.get(tabId);
+        if (t.status === "complete") finish(true);
+      } catch { finish(false); }
+    })();
+    setTimeout(() => finish(false), ITEM_TIMEOUT_MS);
   });
+}
 
-  if (!loaded) {
-    try { await chrome.tabs.remove(tab.id); } catch {}
-    return { ok: false, reason: "tab_load_timeout" };
-  }
+async function processOne(item) {
+  const tab = await ensurePrismaTab();
+  if (!tab || !tab.id) return { ok: false, reason: "no_prisma_tab" };
 
-  // Ask the Prisma content script to add the top result.
-  const result = await new Promise(resolve => {
+  return new Promise((resolve) => {
     let settled = false;
     const timeout = setTimeout(() => {
       if (settled) return;
       settled = true;
-      resolve({ ok: false, reason: "content_script_timeout" });
+      resolve({ ok: false, reason: "content_timeout" });
     }, ITEM_TIMEOUT_MS);
 
     chrome.tabs.sendMessage(
       tab.id,
-      { type: "ADD_TOP_RESULT", query: item.name, organic: !!item.organic },
+      { type: "SEARCH_AND_ADD", query: item.name, organic: !!item.organic },
       (resp) => {
         if (settled) return;
         settled = true;
@@ -95,41 +103,50 @@ async function processOne(item) {
       }
     );
   });
-
-  try { await chrome.tabs.remove(tab.id); } catch {}
-  return result;
 }
 
 async function runQueue() {
   if (running) return;
   running = true;
+  stopRequested = false;
   await saveStats();
   notifyPlanner({ type: "STATUS", stats, running, queued: queue.length });
 
   while (queue.length) {
+    if (stopRequested) break;
     const item = queue.shift();
-    stats.lastMessage = "Lisan: " + item.name;
+    stats.lastMessage = "Otsin: " + item.name;
     await saveStats();
     notifyPlanner({ type: "STATUS", stats, running, queued: queue.length });
 
     const res = await processOne(item);
+    if (stopRequested) break;
+
     if (res.ok) {
       stats.done++;
       notifyPlanner({ type: "ITEM_DONE", item, ok: true });
     } else {
       stats.failed++;
-      stats.lastMessage = "Ei õnnestunud: " + item.name + " (" + res.reason + ")";
+      stats.lastMessage = "Ebaõnnestus: " + item.name + " (" + res.reason + ")";
       notifyPlanner({ type: "ITEM_DONE", item, ok: false, reason: res.reason });
     }
     await saveStats();
 
-    if (queue.length) await sleep(rand(BETWEEN_MS_MIN, BETWEEN_MS_MAX));
+    if (queue.length && !stopRequested) {
+      await sleep(rand(BETWEEN_MS_MIN, BETWEEN_MS_MAX));
+    }
   }
 
+  if (stopRequested) {
+    queue = [];
+    stats.lastMessage = "Peatatud. " + stats.done + " lisatud, " + stats.failed + " vahele jäänud.";
+  } else {
+    stats.lastMessage = "Valmis. " + stats.done + " lisatud, " + stats.failed + " vahele jäänud.";
+  }
   running = false;
-  stats.lastMessage = "Valmis. " + stats.done + " lisatud, " + stats.failed + " vahele jäänud.";
+  stopRequested = false;
   await saveStats();
-  notifyPlanner({ type: "DONE", stats });
+  notifyPlanner({ type: "DONE", stats, running: false, queued: 0 });
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -142,7 +159,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ source: "pp-ext", type: "PONG", version: chrome.runtime.getManifest().version });
       return true;
     }
-
     if (msg.type === "ADD_ITEMS") {
       const items = Array.isArray(msg.items) ? msg.items : [];
       const clean = items
@@ -155,12 +171,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       runQueue();
       return true;
     }
-
+    if (msg.type === "STOP") {
+      stopRequested = true;
+      queue = [];
+      stats.lastMessage = "Peatamine...";
+      saveStats();
+      notifyPlanner({ type: "STATUS", stats, running, queued: 0 });
+      sendResponse({ source: "pp-ext", type: "STOPPING" });
+      return true;
+    }
     if (msg.type === "STATUS_REQUEST") {
       sendResponse({ source: "pp-ext", type: "STATUS", stats, running, queued: queue.length });
       return true;
     }
-
     if (msg.type === "CLEAR") {
       queue = [];
       stats = { total: 0, done: 0, failed: 0, lastMessage: "Tühjendatud." };
@@ -171,7 +194,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// Popup can also ask for status.
 chrome.runtime.onConnect.addListener(port => {
   if (port.name !== "popup") return;
   const send = () => port.postMessage({ stats, running, queued: queue.length });
@@ -184,6 +206,14 @@ chrome.runtime.onConnect.addListener(port => {
       stats = { total: 0, done: 0, failed: 0, lastMessage: "Tühjendatud." };
       saveStats();
       send();
+    } else if (msg?.type === "STOP") {
+      stopRequested = true;
+      queue = [];
+      send();
     }
   });
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (tabId === prismaTabId) prismaTabId = null;
 });
