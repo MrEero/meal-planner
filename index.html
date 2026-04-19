@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perekonna Toiduplaan</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>body{margin:0;font-family:system-ui,-apple-system,sans-serif;}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+const {useState,useMemo,useCallback}=React;
+const I=({d,className})=>React.createElement("svg",{xmlns:"http://www.w3.org/2000/svg",width:24,height:24,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round",className},d.map((p,i)=>React.createElement("path",{key:i,d:p})));
+const Shuffle=({className})=>I({d:["M16 3h5v5","M4 20L21 3","M21 16v5h-5","M15 15l6 6","M4 4l5 5"],className});
+const ChefHat=({className})=>I({d:["M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z","M6 17h12"],className});
+const ShoppingCart=({className})=>I({d:["M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6","M9 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2z","M20 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"],className});
+const Calendar=({className})=>I({d:["M16 2v4","M8 2v4","M3 10h18","M4 4h16a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"],className});
+const Users=({className})=>I({d:["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2","M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z","M23 21v-2a4 4 0 0 0-3-3.87","M16 3.13a4 4 0 0 1 0 7.75"],className});
+const ExternalLink=({className})=>I({d:["M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6","M15 3h6v6","M10 14L21 3"],className});
+const Check=({className})=>I({d:["M20 6L9 17l-5-5"],className});
+const X_=({className})=>I({d:["M18 6L6 18","M6 6l12 12"],className});
+const Lock=({className})=>I({d:["M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z","M7 11V7a5 5 0 0 1 10 0v4"],className});
+const Unlock=({className})=>I({d:["M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z","M8 11V7a4 4 0 0 1 8 0"],className});
+const SlidersHorizontal=({className})=>I({d:["M21 4h-7","M10 4H3","M21 12h-11","M6 12H3","M21 20h-3","M14 20H3","M14 2v4","M6 10v4","M18 18v4"],className});
+const Plus=({className})=>I({d:["M12 5v14","M5 12h14"],className});
+const Trash2=({className})=>I({d:["M3 6h18","M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2","M10 11v6","M14 11v6"],className});
+const RefreshCw=({className})=>I({d:["M23 4v6h-6","M1 20v-6h6","M3.51 9a9 9 0 0 1 14.85-3.36L23 10","M1 14l4.64 4.36A9 9 0 0 0 20.49 15"],className});
+const Save=({className})=>I({d:["M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z","M17 21v-8H7v8","M7 3v5h8"],className});
+const BookOpen=({className})=>I({d:["M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z","M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"],className});
+const Download=({className})=>I({d:["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4","M7 10l5 5 5-5","M12 15V3"],className});
+const Trash=({className})=>I({d:["M3 6h18","M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6","M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"],className});
+const R=[{"i":0,"n":"Tomati-tofuvokk","k":876,"f":37.6,"p":47.9,"c":84.6,"fb":12.1,"t":30,"g":"270g Tofu, pehme (maitsestamata) (Bon), 85kl Riis (pruun, punane, must), 37spl Seesamiseemned, 125tk Tomat","tp":"main"},{"i":1,"n":"Kinoa-röstsalat","k":648,"f":24.4,"p":30,"c":74.6,"fb":14,"t":0,"g":"75kl Kinoa, 60spl Feta / Fitaki juust (rasva 16%), 75spl Kikerherned, konserveeritud, nõrutatud, 12spl Pestokaste, 7tk Maapähkel, 80tk Paprika, 15tk Datlid, 75tk Suvikõrvits, 40tk Mugulsibul, punane (soovi korral)","tp":"main"},{"i":2,"n":"Smuutikauss marjade ja seemnetega","k":646,"f":29.7,"p":17.2,"c":69.1,"fb":16.8,"t":15,"g":"85tk Avokaado, 170tk Banaan, kooreta, 105spl Kreeka jogurt (rasva 4%), 14g Seemnesegu (päevalille-, kõrvitsa-, seedermänniseemned) (nt Pähklinäpp), 170kl Maasikad, 85kl Mustikad, 85kl Vaarikad","tp":"breakfast"},{"i":3,"n":"Praetud banaan kohupiimakreemi ja mustikatega","k":644,"f":23.4,"p":26.6,"c":77.2,"fb":8.1,"t":15,"g":"205tk Banaan, kooreta, 205spl Kohupiimakreem, maitsestamata (rasva 3%), 15tk Mandlid (nt Pähklinäpp), 17g Kookospalmisuhkur, 9tl Või (rasva 82%), 100kl Mustikad","tp":"breakfast"},{"i":4,"n":"Suvipasta vegan","k":638,"f":21.2,"p":36.1,"c":71.5,"fb":11.4,"t":0,"g":"70g Makaronid, gluteenivabad, 110pk Tofu, köömnetega/tilliga/küüslauguga (Bon), 130spl Köögikaste, kaera, taimne (rasva 8,3%) (Alpro), 25spl Maitsepärm, 190tk Suvikõrvits","tp":"main"},{"i":5,"n":"Soe seene-suvikõrvitsa salat grilljuustuga (low carb)","k":647,"f":34.8,"p":38.1,"c":40.1,"fb":10.6,"t":40,"g":"95g Grilljuust, tomati-basiiliku (Nopri), 110spl Kikerherned, konserveeritud, nõrutatud, 17tl Mesi, 5tl Õli (erinevad), 170peotäit Šampinjon/Portobello, 175tk Suvikõrvits, 4g Dijon sinep","tp":"main"},{"i":6,"n":"Grilljuust ja mesised köögiviljad (low carb)","k":646,"f":35,"p":30.7,"c":44.2,"fb":13.7,"t":45,"g":"85g Grilljuust, tomati-basiiliku (Nopri), 10tl Õli (erinevad), 17tl Mesi, 170tk Porgand, 170peotäit Šampinjon/Portobello, 135tk Paprika, 175tk Suvikõrvits, 75tk Mugulsibul, punane (soovi korral)","tp":"main"},{"i":7,"n":"Salat grillitud köögiviljade, virsiku ja fetaga","k":643,"f":29.6,"p":28.8,"c":58.5,"fb":21.3,"t":30,"g":"85spl Feta / Fitaki juust (rasva 16%), 260tk Virsik, 9tl Õli (erinevad), 9g Seemnesegu (päevalille-, kõrvitsa-, seedermänniseemned) (nt Pähklinäpp), 170tk Paprika, 125tk Mugulsibul, punane (soovi korral), 175tk Kirsstomat, 170tk Baklažaan, 170peotäit Šampinjon/Portobello, 115tk Suvikõrvits","tp":"main"},{"i":8,"n":"Koorene pasta köögiviljade ja seentega","k":641,"f":26,"p":31.8,"c":67,"fb":4.7,"t":25,"g":"85kl Makaronid, täistera, 35g Parmesani juust, laktoosivaba (rasva 26,5%), 70spl Köögikoor, laktoosivaba (rasva 15%), 325pk Köögiviljad šampinjonidega (Härmavili), 3tl Õli (erinevad)","tp":"main"},{"i":9,"n":"Röstkõrvitsa-paprika püreesupp","k":646,"f":24.4,"p":23.7,"c":71,"fb":27.4,"t":30,"g":"70g Sulatatud juust, Merevaik, 1140peotäit Kõrvits, 60viilu Leib, rukkileib, 450tk Paprika, 9tl Õli (erinevad)","tp":"main"},{"i":10,"n":"Õuna-rosina muffinid","k":645,"f":24.9,"p":29.1,"c":80.5,"fb":9.9,"t":45,"g":"70spl Jahu, kaerajahu täistera, 17tl Või (rasva 82%), 60tk Muna, koorega (M-suurus), 16g Kookospalmisuhkur, 70spl Kohupiim, maitsestamata (rasva 0,5%), 14g Rosinad, 65tk Õun","tp":"breakfast"},{"i":11,"n":"Karamellikreem marjakastmega","k":642,"f":37.4,"p":24,"c":48.7,"fb":12.3,"t":5,"g":"70spl Vahukoor (rasva 35%), 155pk Kohupiim Ricotta, maitsestamata (rasva 6,4%), 16g Kookospalmisuhkur, 85tk Mango, värske või külmutatud, 95kl Põldmarjad, 95kl Vaarikad, 60kl Mustikad","tp":"snack"},{"i":12,"n":"Kaneeline krõbe sepik ricotta ja banaaniga","k":644,"f":21.3,"p":30.1,"c":81,"fb":4.4,"t":5,"g":"110tk Leib, sepik (kaera, rukki, täistera), 155pk Kohupiim Ricotta, maitsestamata (rasva 6,4%), 100tk Banaan, kooreta, 9tl Või (rasva 82%), 14tl Vahtrasiirup","tp":"breakfast"},{"i":13,"n":"Röstsepik maapähklivõide ja banaaniga","k":642,"f":30.3,"p":22.4,"c":66.8,"fb":7.3,"t":5,"g":"51tl Maapähklivõie, 105tk Leib, sepik (kaera, rukki, täistera), 80tk Banaan, kooreta","tp":"breakfast"},{"i":14,"n":"Röstkukkel suitsulõhe ja upumunaga","k":646,"f":29.7,"p":43.4,"c":48.9,"fb":6.1,"t":15,"g":"105viilu Leib, mitmevilja-röstkukkel, 145tk Muna, koorega (M-suurus), 75g Lõhefilee (külmsuitsu) (M.V.Wool), 45spl Jogurt maitsestamata (rasva 2,5%) (nt Tere), 5g Dijon sinep","tp":"breakfast"},{"i":15,"n":"Suvikõrvitsa-šokolaadikook","k":646,"f":30.1,"p":19.3,"c":73.7,"fb":10.9,"t":70,"g":"75spl Jahu, kaerajahu täistera, 22tl Või (rasva 82%), 22g Kookospalmisuhkur, 50tk Muna, koorega (M-suurus), 8g Kakaopulber, 80tk Suvikõrvits","tp":"snack"},{"i":16,"n":"Kikerherne-maisipihvid värske salatiga","k":643,"f":25.6,"p":29,"c":65.8,"fb":17.7,"t":25,"g":"175spl Kikerherned, konserveeritud, nõrutatud, 60spl Feta / Fitaki juust (rasva 16%), 10tl Õli (erinevad), 25spl Jahu, maisijahu, 85spl Mais, 100tk Tomat, 120tk Kurk (värske), 75peotäit Lehtsalat","tp":"main"},{"i":17,"n":"Kookosemaitseline läätse-suvikõrvitsapada","k":645,"f":28.8,"p":31.1,"c":55.5,"fb":18.8,"t":20,"g":"50g Läätsed (kõik värvid), 145spl Kikerherned, konserveeritud, nõrutatud, 95spl Kookosjook (rasva 17-19%), 7tl Õli (erinevad), 265tk Suvikõrvits, 15tk Küüslauk (valikuline), 35tk Mugulsibul (soovi korral), 60peotäit Spinat","tp":"main"},{"i":18,"n":"Pasta tofu ja avokaadokastmega","k":644,"f":30.5,"p":27.4,"c":61.8,"fb":15.4,"t":25,"g":"70g Makaronid, gluteenivabad, 100tk Avokaado, 145g Tofu, siidine, 5tl Õli (erinevad), 10spl Maitsepärm, 80tk Paprika, 35tk Mugulsibul, punane (soovi korral), 15tk Küüslauk (valikuline)","tp":"main"},{"i":19,"n":"Tuunikalasalat avokaadoga (laktoosivaba)","k":643,"f":28.1,"p":50,"c":45.2,"fb":9.5,"t":10,"g":"175pk Tuunikalakonserv, veega, 85tk Avokaado, 160spl Mais, 45spl Hapukoor, laktoosivaba (rasva 20%), 80tk Õun, 20tk Mugulsibul, punane (soovi korral)","tp":"breakfast"},{"i":20,"n":"Kinoa vürtsikas tomatikastmes ubadega","k":645,"f":16.1,"p":28.5,"c":93.1,"fb":19.1,"t":20,"g":"255spl Konservoad, valged, nõrutatud, 60kl Kinoa, 12tl Kookosrasv/õli, 175g Konservtomatid, purustatud, 25tk Mugulsibul (soovi korral)","tp":"main"},{"i":21,"n":"Halloumi kleepuva riisiga","k":644,"f":24.5,"p":36.6,"c":71.6,"fb":9.1,"t":20,"g":"85kl Riis (pruun, punane, must), 55g Halloumi juust (24%), 120g Munavalge, 60spl Herned, värsked või külmutatud, 8tk Maapähkel, 5tl Õli (erinevad), 55peotäit Idud/võrsed, 20g Roheline sibul","tp":"main"},{"i":22,"n":"Tatra-singiroog","k":643,"f":26.5,"p":40,"c":59.9,"fb":6,"t":15,"g":"75kl Tatar, 155viilu Sink, sealihast (rasva 4%), 50spl Hapukoor (rasva 20%), 7tl Õli (erinevad), 120tk Tomat","tp":"main"},{"i":23,"n":"Kodujuust banaani ja röstitud kaerahelvestega","k":643,"f":20.5,"p":56.2,"c":61.4,"fb":5.9,"t":5,"g":"380spl Kodujuust (rasva 4-5%) (nt Tere), 35spl Kaerahelbed, täistera (Helen), 140tk Banaan, kooreta","tp":"breakfast"},{"i":24,"n":"Tatar hakklihaga","k":644,"f":34.4,"p":32.1,"c":52.3,"fb":5,"t":20,"g":"130pk Hakkliha, veise (rasva 18-20%), 70kl Tatar, 35spl Hapukoor (rasva 20%), 70tk Tomat","tp":"main"},{"i":25,"n":"Omlett kodujuustuga","k":648,"f":28.6,"p":41.4,"c":54.8,"fb":4.1,"t":15,"g":"190tk Muna, koorega (M-suurus), 245tk Banaan, kooreta, 130spl Kodujuust (rasva 4-5%) (nt Tere), 5tl Õli (erinevad), 100tk Kurk (värske)","tp":"breakfast"},{"i":26,"n":"Kodune müslibatoon","k":643,"f":29.6,"p":31.1,"c":61.2,"fb":16.5,"t":30,"g":"25spl Päevalilleseemned, 35spl Kaerahelbed, täistera (Helen), 18spl Kookoshelbed, 26g Valgupulber, taimne, 30tk Datlid, kuivatatud, 25g Aprikoos, kuivatatud","tp":"breakfast"},{"i":27,"n":"Bulguri-valgehallitusjuustukauss (bowl)","k":646,"f":27.5,"p":38.8,"c":56.7,"fb":6.8,"t":20,"g":"70kl Bulgur, 60g Valgehallitusjuust (rasva 24%), 100tk Muna, koorega (M-suurus), 115spl Jogurt maitsestamata (rasva 2,5%) (nt Tere), 85tk Kirsstomat, 25peotäit Roheline salatisegu, 20peotäit Idud/võrsed","tp":"breakfast"},{"i":28,"n":"Kaerahelbe-kohupiimaküpsised šokolaaditükkidega","k":643,"f":27.3,"p":33.1,"c":66.7,"fb":10.1,"t":25,"g":"75spl Kaerahelbed, täistera (Helen), 85tk Muna, koorega (M-suurus), 10tl Kookosrasv/õli, 70spl Kohupiim, maitsestamata (rasva 0,5%), 15tl Mesi, 7g Kakaonibsid (tükeldatud kakaooad)","tp":"breakfast"},{"i":29,"n":"Tatar muna ja suitsuforelliga","k":643,"f":24.2,"p":51.5,"c":56.2,"fb":6.5,"t":20,"g":"75kl Tatar, 140g forellifilee, külmsuitsu (M.V.Wool), 110tk Muna, koorega (M-suurus), 95tk Paprika","tp":"main"},{"i":30,"n":"Pasta hakklihaga","k":644,"f":23.1,"p":51.9,"c":56.7,"fb":8.2,"t":35,"g":"175spl Hakkliha, sea (rasva 5%), 55g Makaronid, gluteenivabad, 60spl Kikerherned, konserveeritud, nõrutatud, 7tl Õli (erinevad), 45spl Kohvikoor (rasva 10%), 120g Konservtomatid, purustatud","tp":"main"},{"i":31,"n":"Banaan mandlitega","k":643,"f":33.5,"p":16,"c":64,"fb":10.3,"t":1,"g":"59tk Mandlid (nt Pähklinäpp), 295tk Banaan, kooreta","tp":"snack"},{"i":32,"n":"Valge oa kook","k":643,"f":28.7,"p":24.9,"c":66.8,"fb":13.7,"t":60,"g":"35tl Maapähklivõie, 175spl Konservoad, valged, nõrutatud, 30spl Jahu, kaerajahu täistera, 8tl Kookosrasv/õli, 20tl Vahtrasiirup","tp":"snack"},{"i":33,"n":"Kreeka jogurt soolakaramelliga","k":642,"f":29.1,"p":34.1,"c":57,"fb":6.6,"t":15,"g":"380spl Kreeka jogurt (rasva 4%), 65tk Datlid, kuivatatud, 26tl Maapähklivõie","tp":"breakfast"},{"i":34,"n":"Vürtsikilu vaagen","k":651,"f":29.7,"p":34.3,"c":53.2,"fb":7.1,"t":12,"g":"120viilu Leib, Pärnu rukkileib, 105g Vürtsikilu, 95tk Muna, koorega (M-suurus), 30spl Hapukoor (rasva 20%), 3tl Õli (erinevad), 15tk Küüslauk (valikuline)","tp":"breakfast"},{"i":35,"n":"Musta oa šokolaadikreem","k":648,"f":26.9,"p":27.5,"c":63.7,"fb":21.4,"t":15,"g":"55tk India pähkel (nt Pähklinäpp), 220spl Mustad oad, konserveeritud, nõrutatud, 80tk Banaan, kooreta, 15tl Vahtrasiirup, 11g Toorkakao pulber","tp":"snack"},{"i":36,"n":"Salendav roheline (Boost Yourself)","k":645,"f":20.7,"p":28.7,"c":78.8,"fb":16.5,"t":5,"g":"41tk India pähkel (nt Pähklinäpp), 40g Goji & cranberry tervisesegu, Healthy Weight (Boost Yourself), 150tk Banaan, kooreta, 145tk Õun, 120kl Maasikad, 30peotäit Spinat, 500kl Vesi","tp":"breakfast"},{"i":37,"n":"Tofu bolognese","k":641,"f":23.2,"p":38.6,"c":70.1,"fb":7.1,"t":40,"g":"70kl Makaronid, täistera, 320g Tofu, siidine, 495spl Tomatipasta, Tomatera, 12tl Õli (erinevad)","tp":"main"},{"i":38,"n":"Valge oa pasteet","k":644,"f":20.1,"p":28.6,"c":77.4,"fb":21.4,"t":20,"g":"225spl Konservoad, valged, nõrutatud, 90viilu Leib, saib, 14tl Õli (erinevad), 150tk Tomat, 10tk Küüslauk (valikuline)","tp":"main"},{"i":39,"n":"Kikerhernestega täidetud baklažaan","k":640,"f":31,"p":25.9,"c":50.9,"fb":25.4,"t":30,"g":"195spl Kikerherned, konserveeritud, nõrutatud, 33tl Maapähklivõie, 425tk Baklažaan, 8tl Õli (erinevad), 85spl Tomatipüree (Pomito), 5g Roheline sibul","tp":"main"},{"i":40,"n":"Riis ubade ja kikerhernestega","k":644,"f":23.7,"p":23.1,"c":80.5,"fb":19.9,"t":20,"g":"55kl Riis (pruun, punane, must), 105spl Kookosjook (rasva 17-19%), 135spl Kikerherned, konserveeritud, nõrutatud, 80spl Punased oad, konserveeritud, nõrutatud, 155g Konservtomatid, purustatud","tp":"main"},{"i":41,"n":"Mehhiko hommikusöök","k":642,"f":27,"p":39.7,"c":50.9,"fb":20.4,"t":10,"g":"205tk Muna, koorega (M-suurus), 195spl Mustad oad, konserveeritud, nõrutatud, 110spl Mais, 7tl Kookosrasv/õli, 190tk Paprika, 25tk Mugulsibul, punane (soovi korral)","tp":"breakfast"},{"i":42,"n":"Tatrahelbepuder muna ja peekoniga","k":647,"f":30.6,"p":32.9,"c":56.4,"fb":5.1,"t":10,"g":"60spl Tatrahelbed, 160tk Muna, koorega (M-suurus), 40g Ameerikapärane toorsuitsupeekon (rasva 25%), 385kl Taimne jook, India pähkli (Alpro), 150tk Kirsstomat","tp":"breakfast"},{"i":43,"n":"Krõbe leib purustatud ubade ja avokaadoga","k":643,"f":28.5,"p":20.3,"c":62,"fb":21,"t":10,"g":"110tk Avokaado, 95viilu Leib, Pärnu rukkileib, 150spl Punased oad, konserveeritud, nõrutatud, 5tl Õli (erinevad)","tp":"breakfast"},{"i":44,"n":"Banaan šokolaadi-pähklikattega","k":643,"f":36.9,"p":10.8,"c":62.6,"fb":9.7,"t":5,"g":"42tk Sarapuupähkel, 255tk Banaan, kooreta, 10tl Kookosrasv/õli, 8g Toorkakao pulber, 8tl Vahtrasiirup","tp":"snack"},{"i":45,"n":"Juust, rosinad, pähklid","k":643,"f":24.6,"p":50.5,"c":51.9,"fb":6.3,"t":1,"g":"135g Juku juust (rasva 10%), 78g Rosinad, 17tk Sarapuupähkel","tp":"snack"},{"i":46,"n":"Smuuti bowl","k":648,"f":27.1,"p":21.6,"c":80.3,"fb":14.4,"t":10,"g":"45spl Kaerahelbed, jämedad, gluteenivabad, 27spl Kõrvitsaseemned, kuivatatud (nt Pähklinäpp), 140tk Banaan, kooreta, 60spl Kookosjook (rasva 17-19%), 120tk Apelsin, kooreta, 70tk Mango, värske või külmutatud, 60peotäit Spinat","tp":"breakfast"},{"i":47,"n":"Avokaado-munavõileib","k":647,"f":32.7,"p":26.9,"c":55.3,"fb":13,"t":12,"g":"100viilu Leib, mitmeviljaröst, 135tk Muna, koorega (M-suurus), 65tk Avokaado, 115tk Õun, 20peotäit Rukola","tp":"breakfast"},{"i":48,"n":"Tempeh ahjukartulitega","k":644,"f":27.3,"p":28.1,"c":72.1,"fb":16,"t":30,"g":"105g Tempeh, 135g Bataat (maguskartul), 180tk Kartul, 40tk Avokaado, 7tl Õli (erinevad), 70tk Tomat","tp":"main"},{"i":49,"n":"Paleo maasika-toorjuustukook","k":643,"f":44.5,"p":14.6,"c":39.9,"fb":6.7,"t":60,"g":"51tk India pähkel (nt Pähklinäpp), 20tk Mandlid (nt Pähklinäpp), 10tl Kookosrasv/õli, 15tk Datlid, kuivatatud, 12tl Mesi, 80kl Maasikad","tp":"snack"},{"i":50,"n":"Banaani-vaarika muffinid","k":643,"f":30.8,"p":39.7,"c":48.5,"fb":9.1,"t":20,"g":"325tk Muna, koorega (M-suurus), 185tk Banaan, kooreta, 175kl Vaarikad","tp":"breakfast"},{"i":51,"n":"Maasikavaht","k":642,"f":28.4,"p":42.1,"c":48.2,"fb":10.1,"t":3,"g":"75spl Vahukoor (rasva 35%), 530kl Maasikad, 385g Munavalge","tp":"snack"},{"i":52,"n":"Kiired kikerherned munaga","k":645,"f":30.1,"p":44.3,"c":40.7,"fb":18.8,"t":5,"g":"270spl Kikerherned, konserveeritud, nõrutatud, 210tk Muna, koorega (M-suurus), 150tk Kirsstomat, 4tl Kookosrasv/õli","tp":"breakfast"},{"i":53,"n":"Maapähkli-kaerahelbepuder","k":645,"f":30.3,"p":32.8,"c":61.6,"fb":10.4,"t":20,"g":"45tl Maapähklivõie, 55spl Kaerahelbed, täistera (Helen), 250kl taimne jook, mandli (Alpro), 130g Munavalge, 50tk Banaan, kooreta","tp":"breakfast"},{"i":54,"n":"Mehhikopärane tempehi salat","k":641,"f":30.5,"p":34,"c":61.8,"fb":16.3,"t":45,"g":"70kl Kinoa, 110g Tempeh, 50tk Avokaado, 5tl Õli (erinevad), 110tk Kirsstomat, 15spl Mais","tp":"main"},{"i":55,"n":"Omlett tuunikalaga","k":643,"f":21.6,"p":47,"c":61.1,"fb":11.5,"t":30,"g":"130viilu Leib, rukkileib, 155tk Muna, koorega (M-suurus), 90pk Tuunikalakonserv, veega, 5tl Õli (erinevad), 70tk Tomat, 100tk Kurk (värske)","tp":"breakfast"},{"i":56,"n":"Pasta suitsukalaga","k":643,"f":29.9,"p":37.5,"c":55.3,"fb":7,"t":30,"g":"75kl Makaronid, täistera, 130g Latikas, kuumsuitsu, 50spl Vahukoor (rasva 35%), 125tk Paprika","tp":"main"},{"i":57,"n":"Hirsipuder kodujuustuga","k":644,"f":29.8,"p":40.2,"c":53.1,"fb":2.1,"t":15,"g":"240spl Kodujuust (rasva 4-5%) (nt Tere), 65kl Hirss, 12tl Või (rasva 82%), 70spl Kohvikoor (rasva 10%)","tp":"breakfast"},{"i":58,"n":"Kiluleib munavõiga","k":646,"f":29.5,"p":41.4,"c":48.6,"fb":9,"t":15,"g":"95viilu Leib, rukkileib, 120g Vürtsikilu, 75tk Muna, koorega (M-suurus), 65spl Kodujuust (rasva 4-5%) (nt Tere), 30spl Hapukoor (rasva 20%), 100tk Nuikapsas","tp":"breakfast"},{"i":59,"n":"Kiire elu kikerherneroog","k":646,"f":27.2,"p":57.9,"c":33.9,"fb":16,"t":15,"g":"195pk Hakkliha, delikatess (rasva 7%) (Maks ja Moorits), 220spl Kikerherned, konserveeritud, nõrutatud, 8tl Kookosrasv/õli, 145tk Kurk (värske), 15tk Küüslauk (valikuline), 25tk Mugulsibul (soovi korral), 20spl Tomatipasta Pomi","tp":"main"},{"i":60,"n":"Kikerherne-kinoapada hakklihaga","k":646,"f":25.4,"p":49,"c":50.9,"fb":11.4,"t":35,"g":"165pk Hakkliha, delikatess (rasva 7%) (Maks ja Moorits), 50kl Kinoa, 8tl Õli (erinevad), 60spl Kikerherned, konserveeritud, nõrutatud, 30spl Punased oad, konserveeritud, nõrutatud, 50spl Pitsa ja pasta kaste (Pomito), 15tk Küüslauk (valikuline), 45tk Paprika, 15tk Mugulsibul (soovi korral)","tp":"main"},{"i":61,"n":"Avokaado-munavõi","k":644,"f":29.3,"p":44.2,"c":46.2,"fb":11.4,"t":5,"g":"110viilu Leib, saib, 140spl Kodujuust (rasva 4-5%) (nt Tere), 110tk Muna, koorega (M-suurus), 35tk Avokaado","tp":"breakfast"},{"i":62,"n":"Porgandidipp","k":642,"f":31.5,"p":31.1,"c":45.9,"fb":19.4,"t":5,"g":"75viilu Juust (rasva 24-26%), 510tk Porgand, 50spl Hapukoor (rasva 20%), 255tk Nuikapsas, 125spl Jogurt, maitsestamata (rasva 0,5%)","tp":"snack"},{"i":63,"n":"Porgandipoisid pähklitega","k":641,"f":44.1,"p":12.6,"c":37.1,"fb":22.1,"t":2,"g":"71tk Sarapuupähkel, 535tk Porgand","tp":"snack"},{"i":64,"n":"Puder banaani ja piimaga","k":636,"f":23.4,"p":38.1,"c":70.4,"fb":5.2,"t":15,"g":"270spl Kohupiimapasta, maitsestamata (rasva 5%), 265kl Piim (rasva 2,5%), 40spl Kaerahelbed, täistera (Helen), 50tk Banaan, kooreta, 9tl Mesi","tp":"breakfast"},{"i":65,"n":"Herne-kartulipuder praetud räimedega","k":646,"f":26.2,"p":48.9,"c":51.3,"fb":8.5,"t":40,"g":"225tk Räim, filee, 245tk Kartul, 90spl Herned, värsked või külmutatud, 7tl Õli (erinevad), 60kl Piim (rasva 2,5%), 20spl Hapukoor (rasva 10%), 15tk Mugulsibul (soovi korral)","tp":"main"},{"i":66,"n":"Tatrapuder kodujuustuga","k":651,"f":27.9,"p":47.6,"c":55.2,"fb":6.7,"t":25,"g":"255spl Kodujuust (rasva 4-5%) (nt Tere), 55kl Tatar, 35tl Sulatatud juust (rasva 18-19%), 35spl Hapukoor (rasva 20%), 80tk Paprika, 95tk Marineeritud kurk (kuni 22 kcal/ 100 g kohta)","tp":"breakfast"},{"i":67,"n":"Munavõi galetiga","k":644,"f":28.7,"p":32.9,"c":57.6,"fb":1.4,"t":25,"g":"75g Galett (riisi, tatra, maisi jt), 205tk Muna, koorega (M-suurus), 45spl Hapukoor (rasva 20%), 90tk Kurk (värske)","tp":"breakfast"}];
+const RECIPES=R.map(r=>({id:r.i,name:r.n,kcal:r.k,fat:r.f,protein:r.p,carbs:r.c,fiber:r.fb,prepTime:r.t,ingredients:r.g,type:r.tp}));
+const FAMILY=[{name:"Liisbeth",kcalPerMeal:643,multiplier:1.0,dailyKcal:1930},{name:"Evert",kcalPerMeal:1281,multiplier:1.992,dailyKcal:3844}];
+const DAYS_ET=["Esmaspäev","Teisipäev","Kolmapäev","Neljapäev","Reede"];
+const MEAL_TYPES_ET={breakfast:"Hommikusöök",lunch:"Lõunasöök",dinner:"Õhtusöök"};
+const SOUP_KEYWORDS=["supp","püreesupp","kreemsupp"];
+const EXPENSIVE_KEYWORDS=["lõhe","forell","halloumi","feta","grilljuust","ricotta","parmesani","valgehallitus","suitsulõhe","suitsuforell","tuunikala","tempeh","avokaado","india pähkel","mandlid","sarapuupähkel","kreeka jogurt","vahukoor","peekon","mango","virsik","kookos"];
+const CHEAP_KEYWORDS=["tatar","riis","makaronid","pasta","oad","kikerherned","läätsed","kartul","bataat","kaerahelbed","muna","banaan","kodujuust","kohupiim","kohupiimakreem","piim","leib","sepik","hakkliha","herned","mais","porgand","kapsas","suvikõrvits","tomat","kurk","paprika","sibul","tomatipasta","konservtomatid"];
+const DEFAULT_RULES=[
+  {id:"no-duplicates",name:"Ei korda retsepte",description:"Samas nädalas ei kasutata sama retsepti kaks korda. Erand: õhtusöök = järgmise päeva lõuna.",enabled:true,builtin:true},
+  {id:"snacks-breakfast-only",name:"Snäkid ainult hommikuks",description:"Snäki-tüüpi retseptid saavad olla ainult hommikusöögiks, mitte õhtusöögiks.",enabled:true,builtin:true},
+  {id:"dinner-is-cooking",name:"Õhtusöök = päris toidutegemine",description:"Õhtusöögiks valitakse ainult päriselt küpsetatavaid retsepte (tüüp: main).",enabled:true,builtin:true},
+  {id:"min-prep-dinner",name:"Õhtusöök vähemalt 15 min",description:"Õhtusöögi retseptid peavad olema vähemalt 15 minutit valmistusaega.",enabled:false,builtin:true},
+  {id:"variety-protein",name:"Valgu vaheldus",description:"Väldi sama põhivalguallikat kahel järjestikusel päeval.",enabled:false,builtin:true},
+  {id:"no-soups",name:"Ei suppe",description:"Jäta supid menüüst välja.",enabled:true,builtin:true},
+];
+const PAYDAY=10;
+const UNIT_MAP={g:"g",kg:"kg",ml:"ml",dl:"dl",l:"l",tl:"g",spl:"g",kl:"g",tk:"g",pk:"g",viilu:"g",peotäit:"g"};
+
+const CATEGORIES={
+  "Liha ja kala":["hakkliha","peekon","sink","räim","lõhe","forell","latikas","tuunikala","vürtsikilu","kana"],
+  "Piimatooted":["juust","feta","halloumi","grilljuust","parmesani","ricotta","valgehallitus","sulatatud juust","juku","kodujuust","kohupiim","kohupiimakreem","kohupiimapasta","hapukoor","jogurt","kreeka jogurt","kohvikoor","vahukoor","köögikoor","piim","või","kookosjook"],
+  "Puu- ja köögivili":["banaan","õun","apelsin","virsik","mango","maasika","mustika","vaarika","põldmarja","avokaado","tomat","kirsst","paprika","kurk","porgand","suvikõrvits","baklažaan","kartul","bataat","kõrvits","nuikapsas","spinat","lehtsalat","rukola","roheline salat","idud","šampinjon","herned","sibul","mugulsibul","küüslauk","roheline sibul","datlid","aprikoos"],
+  "Maiustused":["šokolaad","kakao","kakaonibsid","toorkakao","kookospalmisuhkur","mesi","vahtrasiirup","rosinad","goji"],
+};
+const EGG_KEYWORDS=["muna, koorega","munavalge"];
+const EGG_WEIGHT=60;
+
+function categorize(name){
+  const low=name.toLowerCase();
+  for(const [cat,keywords] of Object.entries(CATEGORIES)){
+    if(keywords.some(kw=>low.includes(kw)))return cat;
+  }
+  return "Muu";
+}
+
+function isSoup(r){return SOUP_KEYWORDS.some(kw=>r.name.toLowerCase().includes(kw));}
+function estimateCost(r){const t=(r.name+" "+r.ingredients).toLowerCase();let s=0;EXPENSIVE_KEYWORDS.forEach(kw=>{if(t.includes(kw))s+=2;});CHEAP_KEYWORDS.forEach(kw=>{if(t.includes(kw))s-=1;});return s;}
+function getBudgetPhase(mon){const d=mon.getDate();return(d>=PAYDAY&&d<PAYDAY+14)?"normal":"budget";}
+const RECIPE_COSTS=RECIPES.map(r=>({...r,cost:estimateCost(r)}));
+const BUDGET_THRESHOLD=0;
+
+function getNextMonday(){const today=new Date(2026,2,28);const day=today.getDay();const diff=(1-day+7)%7||7;const m=new Date(today);m.setDate(today.getDate()+diff);return m;}
+function formatDateRange(s,e){return `${s.getDate()}.${s.getMonth()+1} - ${e.getDate()}.${e.getMonth()+1}.${e.getFullYear()}`;}
+function normalizeUnit(raw){return UNIT_MAP[raw]||raw;}
+function formatQuantity(qty,unit){if(unit==="g"&&qty>=1000)return{qty:Math.round((qty/1000)*100)/100,unit:"kg"};if(unit==="ml"&&qty>=1000)return{qty:Math.round((qty/1000)*100)/100,unit:"l"};return{qty:Math.round(qty*10)/10,unit};}
+function parseIngredients(str){const ings={};str.split(", ").forEach(part=>{const m=part.match(/^(\d+(?:\.\d+)?)(.*?)\s+(.+)$/);if(m){const qty=parseFloat(m[1]);const unit=normalizeUnit(m[2].trim());const name=m[3].trim();const key=name.toLowerCase();if(!ings[key])ings[key]={name,quantity:0,unit};ings[key].quantity+=qty;}});return ings;}
+
+function MealPlanner(){
+  const nextMonday=getNextMonday();
+  const budgetPhase=getBudgetPhase(nextMonday);
+  const [budgetMode,setBudgetMode]=useState(budgetPhase);
+  const [rules,setRules]=useState(DEFAULT_RULES);
+  const [customRules,setCustomRules]=useState([]);
+  const allRules=useMemo(()=>[...rules,...customRules],[rules,customRules]);
+  const isRuleOn=useCallback(id=>allRules.find(r=>r.id===id)?.enabled??false,[allRules]);
+  const toggleRule=useCallback(id=>{setRules(p=>p.map(r=>r.id===id?{...r,enabled:!r.enabled}:r));setCustomRules(p=>p.map(r=>r.id===id?{...r,enabled:!r.enabled}:r));},[]);
+  const addCustomRule=useCallback((name,desc)=>{setCustomRules(p=>[...p,{id:"custom-"+Date.now(),name,description:desc,enabled:true,builtin:false}]);},[]);
+  const removeCustomRule=useCallback(id=>{setCustomRules(p=>p.filter(r=>r.id!==id));},[]);
+  const filteredRecipes=useMemo(()=>budgetMode==="normal"?RECIPE_COSTS:RECIPE_COSTS.filter(r=>r.cost<=BUDGET_THRESHOLD),[budgetMode]);
+
+  const [plan,setPlan]=useState({breakfasts:[52,43,64,13,34],dinners:[59,18,16,8,38,39]});
+  const nextFriday=new Date(nextMonday);
+  nextFriday.setDate(nextMonday.getDate()+4);
+  const dateRange=formatDateRange(nextMonday,nextFriday);
+
+  const [locked,setLocked]=useState({});
+  const [savedMenus,setSavedMenus]=useState([{id:1,label:"30.3 - 3.4.2026",savedAt:"29.03.2026 12:00",plan:{breakfasts:[52,43,64,13,34],dinners:[59,18,16,8,38,39]}}]);
+  const [view,setView]=useState("edit");
+  const [swapDay,setSwapDay]=useState(null);
+  const [swapType,setSwapType]=useState(null);
+  const [viewRecipe,setViewRecipe]=useState(null);
+
+  const pickFromPool=useCallback((pool,used)=>{const av=pool.filter(r=>!used.has(r.id));const src=av.length>0?av:pool;return src[Math.floor(Math.random()*src.length)].id;},[]);
+
+  const generateNewPlan=useCallback(()=>{
+    const noDupes=isRuleOn("no-duplicates");
+    const dinnerIsCooking=isRuleOn("dinner-is-cooking");
+    const minPrep=isRuleOn("min-prep-dinner");
+    const noSoups=isRuleOn("no-soups");
+    let bkPool=filteredRecipes.filter(r=>r.type==="breakfast"||r.type==="snack");
+    let dnPool=filteredRecipes.filter(r=>r.type==="main");
+    if(noSoups){bkPool=bkPool.filter(r=>!isSoup(r));dnPool=dnPool.filter(r=>!isSoup(r));}
+    if(minPrep){const f=dnPool.filter(r=>r.prepTime>=15);if(f.length>=6)dnPool=f;}
+    setPlan(prev=>{
+      const used=new Set();
+      const newD=[];
+      for(let i=0;i<6;i++){if(prev.dinners[i]!==undefined&&locked[`dinner-${i}`]){newD.push(prev.dinners[i]);if(noDupes)used.add(prev.dinners[i]);}else{const p=pickFromPool(dnPool,noDupes?used:new Set());newD.push(p);if(noDupes)used.add(p);}}
+      const newB=[];
+      for(let i=0;i<5;i++){if(prev.breakfasts[i]!==undefined&&locked[`breakfast-${i}`]){newB.push(prev.breakfasts[i]);if(noDupes)used.add(prev.breakfasts[i]);}else{const p=pickFromPool(bkPool,noDupes?used:new Set());newB.push(p);if(noDupes)used.add(p);}}
+      return{breakfasts:newB,dinners:newD};
+    });
+  },[locked,filteredRecipes,isRuleOn,pickFromPool]);
+
+  const getR=useCallback(id=>RECIPES.find(r=>r.id===id),[]);
+  const getCost=useCallback(id=>RECIPE_COSTS.find(r=>r.id===id)?.cost??0,[]);
+  const toggleLock=useCallback(key=>setLocked(p=>({...p,[key]:!p[key]})),[]);
+
+  const saveCurrentMenu=useCallback(()=>{
+    const now=new Date();
+    setSavedMenus(p=>[{id:Date.now(),label:dateRange,savedAt:now.toLocaleDateString("et-EE")+" "+now.toLocaleTimeString("et-EE",{hour:"2-digit",minute:"2-digit"}),plan:{breakfasts:[...plan.breakfasts],dinners:[...plan.dinners]}},...p]);
+  },[plan,dateRange]);
+  const loadSavedMenu=useCallback(sp=>{setPlan({breakfasts:[...sp.breakfasts],dinners:[...sp.dinners]});},[]);
+  const deleteSavedMenu=useCallback(id=>{setSavedMenus(p=>p.filter(m=>m.id!==id));},[]);
+  const importMenus=useCallback(json=>{try{const data=JSON.parse(json);if(Array.isArray(data)){setSavedMenus(data);return true;}return false;}catch{return false;}},[]);
+  const exportMenus=useCallback(()=>JSON.stringify(savedMenus),[savedMenus]);
+
+  const swapMeal=useCallback(newId=>{
+    if(swapType==="breakfast")setPlan(p=>({...p,breakfasts:p.breakfasts.map((id,i)=>i===swapDay?newId:id)}));
+    else if(swapType==="lunch")setPlan(p=>({...p,dinners:p.dinners.map((id,i)=>i===swapDay?newId:id)}));
+    else if(swapType==="dinner")setPlan(p=>({...p,dinners:p.dinners.map((id,i)=>i===swapDay+1?newId:id)}));
+    setSwapDay(null);setSwapType(null);
+  },[swapDay,swapType]);
+
+  const swapOptions=useMemo(()=>swapType==="breakfast"?RECIPES.filter(r=>r.type==="breakfast"||r.type==="snack"):RECIPES.filter(r=>r.type==="main"),[swapType]);
+
+  const shoppingList=useMemo(()=>{
+    const all={};const NUM_PEOPLE=2;const DL=["E","T","K","N","R"];
+    const add=(recipe,mc,tag)=>{const ings=parseIngredients(recipe.ingredients);Object.entries(ings).forEach(([k,ing])=>{const sq=ing.quantity*mc*NUM_PEOPLE;if(!all[k]){all[k]={name:ing.name,quantity:sq,unit:ing.unit,meals:[]};}else{all[k].quantity+=sq;}if(!all[k].meals.includes(tag))all[k].meals.push(tag);});};
+    plan.breakfasts.forEach((id,i)=>add(getR(id),1,DL[i]+" hommik"));
+    plan.dinners.forEach((id,idx)=>{
+      if(idx===0){add(getR(id),1,DL[0]+" lõuna");}
+      else if(idx===plan.dinners.length-1){add(getR(id),1,DL[idx-1]+" õhtu");}
+      else{add(getR(id),1,DL[idx-1]+" õhtu");add(getR(id),1,DL[idx]+" lõuna");}
+    });
+    return Object.values(all).map(ing=>{
+      const isEgg=EGG_KEYWORDS.some(kw=>ing.name.toLowerCase().includes(kw));
+      const f=isEgg?{qty:Math.round(ing.quantity/EGG_WEIGHT),unit:"tk"}:formatQuantity(ing.quantity,ing.unit);
+      return{name:ing.name,quantity:f.qty,unit:f.unit,meals:ing.meals,category:categorize(ing.name)};
+    }).sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
+  },[plan,getR]);
+
+  const dailyKcals=useMemo(()=>{const t=[];for(let d=0;d<5;d++){t.push(getR(plan.breakfasts[d]).kcal+getR(plan.dinners[d]).kcal+getR(plan.dinners[d+1]).kcal);}return t;},[plan,getR]);
+  const weeklyAvg=useMemo(()=>Math.round(dailyKcals.reduce((a,b)=>a+b,0)/5),[dailyKcals]);
+
+  const budgetBk=filteredRecipes.filter(r=>r.type==="breakfast").length;
+  const budgetMn=filteredRecipes.filter(r=>r.type==="main").length;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-4xl md:text-5xl font-bold text-teal-900 flex items-center gap-3">
+              <ChefHat className="w-10 h-10 text-teal-600" />Perekonna Toiduplaan
+            </h1>
+            <a href="https://docs.google.com/spreadsheets/d/1hqy0t9n7RSujtkBDMnraGB-9s0iRAHbt/edit" target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:text-teal-700 transition"><ExternalLink className="w-5 h-5" /></a>
+          </div>
+          <p className="text-teal-700 text-lg font-medium">{DAYS_ET[0]} - {DAYS_ET[4]} | {dateRange}</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+          <div className="flex items-center gap-6">
+            <Users className="w-6 h-6 text-teal-600" />
+            <div className="flex gap-8 flex-wrap">
+              {FAMILY.map(m=><div key={m.name} className="flex flex-col"><p className="font-semibold text-gray-900">{m.name}</p><p className="text-sm text-gray-600">{m.dailyKcal} kcal/päev</p></div>)}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-md p-4 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700">Eelarve:</span>
+              <button onClick={()=>setBudgetMode("normal")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${budgetMode==="normal"?"bg-green-600 text-white shadow":"bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>Palgap. 1-2 n. ({RECIPE_COSTS.length})</button>
+              <button onClick={()=>setBudgetMode("budget")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${budgetMode==="budget"?"bg-amber-500 text-white shadow":"bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>Kokkuhoid 3-4 n. ({budgetBk+budgetMn})</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mb-6 flex-wrap">
+          <button onClick={generateNewPlan} className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition shadow-md hover:shadow-lg text-white ${budgetMode==="budget"?"bg-amber-500 hover:bg-amber-600":"bg-green-600 hover:bg-green-700"}`}><Shuffle className="w-5 h-5" />Genereeri menüü</button>
+          <button onClick={()=>setView(view==="menu"?"edit":"menu")} className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition shadow-md hover:shadow-lg ${view==="menu"?"bg-teal-700 text-white":"bg-teal-600 hover:bg-teal-700 text-white"}`}><Calendar className="w-5 h-5" />{view==="menu"?"Tagasi":"Nädala menüü"}</button>
+          <button onClick={()=>setView(view==="shop"?"edit":"shop")} className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition shadow-md hover:shadow-lg ${view==="shop"?"bg-purple-700 text-white":"bg-purple-600 hover:bg-purple-700 text-white"}`}><ShoppingCart className="w-5 h-5" />Ostunimekiri</button>
+          <button onClick={()=>setView(view==="rules"?"edit":"rules")} className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition shadow-md hover:shadow-lg ${view==="rules"?"bg-gray-700 text-white":"bg-gray-600 hover:bg-gray-700 text-white"}`}><SlidersHorizontal className="w-5 h-5" />Reeglid ({allRules.filter(r=>r.enabled).length})</button>
+          <button onClick={saveCurrentMenu} className="flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition shadow-md hover:shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white"><Save className="w-5 h-5" />Salvesta</button>
+          <button onClick={()=>setView(view==="saved"?"edit":"saved")} className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition shadow-md hover:shadow-lg ${view==="saved"?"bg-indigo-700 text-white":"bg-indigo-600 hover:bg-indigo-700 text-white"}`}><BookOpen className="w-5 h-5" />Salvestatud ({savedMenus.length})</button>
+          <div className="bg-blue-100 text-blue-900 px-4 py-3 rounded-lg font-semibold">{RECIPES.length} retsepti</div>
+        </div>
+
+        {view==="rules"?<RulesPanel rules={allRules} onToggle={toggleRule} onAdd={addCustomRule} onRemove={removeCustomRule} />
+        :view==="menu"?<WeeklyMenuView plan={plan} getR={getR} getCost={getCost} dailyKcals={dailyKcals} weeklyAvg={weeklyAvg} dateRange={dateRange} budgetMode={budgetMode} onSwap={(d,t)=>{setSwapDay(d);setSwapType(t);}} onViewRecipe={setViewRecipe} />
+        :view==="saved"?<SavedMenusPanel savedMenus={savedMenus} onLoad={sp=>{loadSavedMenu(sp);setView("edit");}} onDelete={deleteSavedMenu} getR={getR} onImport={importMenus} onExport={exportMenus} />
+        :view==="shop"?<ShoppingListPanel items={shoppingList} />
+        :<>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            {DAYS_ET.map((day,di)=>(
+              <div key={day} className="bg-white rounded-xl shadow-md overflow-hidden">
+                <div className="bg-teal-600 text-white px-4 py-3 font-bold text-center">{day}</div>
+                <div className="p-4 space-y-3">
+                  <MealCard recipe={getR(plan.breakfasts[di])} mealType="breakfast" cost={getCost(plan.breakfasts[di])} locked={locked[`breakfast-${di}`]} onLock={()=>toggleLock(`breakfast-${di}`)} onSwap={()=>{setSwapDay(di);setSwapType("breakfast");}} isLeftover={false} onViewRecipe={setViewRecipe} />
+                  <MealCard recipe={getR(plan.dinners[di])} mealType="lunch" cost={getCost(plan.dinners[di])} locked={locked[`lunch-${di}`]} onLock={()=>toggleLock(`lunch-${di}`)} onSwap={()=>{setSwapDay(di);setSwapType("lunch");}} isLeftover={true} onViewRecipe={setViewRecipe} />
+                  <MealCard recipe={getR(plan.dinners[di+1])} mealType="dinner" cost={getCost(plan.dinners[di+1])} locked={locked[`dinner-${di}`]} onLock={()=>toggleLock(`dinner-${di}`)} onSwap={()=>{setSwapDay(di);setSwapType("dinner");}} isLeftover={false} onViewRecipe={setViewRecipe} />
+                  <div className="border-t pt-3 mt-3"><p className="text-xs font-semibold text-gray-600 mb-1">Päevasumma</p><p className="text-lg font-bold text-teal-700">{dailyKcals[di]} kcal</p></div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-teal-50 border-2 border-teal-200 rounded-xl p-6 text-center">
+            <p className="text-gray-700 text-sm font-medium mb-2">Nädala keskmine päevakaloraaž</p>
+            <p className="text-4xl font-bold text-teal-700">{weeklyAvg} kcal</p>
+          </div>
+        </>}
+
+        {swapDay!==null&&<SwapPanel options={swapOptions} currentRecipeId={swapType==="breakfast"?plan.breakfasts[swapDay]:swapType==="lunch"?plan.dinners[swapDay]:plan.dinners[swapDay+1]} onSelect={swapMeal} onClose={()=>{setSwapDay(null);setSwapType(null);}} mealType={swapType} />}
+        {viewRecipe!==null&&<RecipeDetailPanel recipe={getR(viewRecipe)} onClose={()=>setViewRecipe(null)} />}
+      </div>
+    </div>
+  );
+}
+
+function MealCard({recipe,mealType,cost,locked,onLock,onSwap,isLeftover,onViewRecipe}){
+  const cl=cost<=-2?{t:"€",c:"text-green-600"}:cost>=3?{t:"€€€",c:"text-red-500"}:cost>=1?{t:"€€",c:"text-amber-500"}:null;
+  const bg=mealType==="breakfast"?"bg-amber-50 border-amber-200":mealType==="lunch"?"bg-blue-50 border-blue-200":"bg-orange-50 border-orange-200";
+  const tc=mealType==="breakfast"?"text-amber-900":mealType==="lunch"?"text-blue-900":"text-orange-900";
+  const bc=mealType==="breakfast"?"bg-amber-100 text-amber-700":mealType==="lunch"?"bg-blue-100 text-blue-700":"bg-orange-100 text-orange-700";
+  return(
+    <div className={`border-2 rounded-lg p-3 ${bg}`}>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex-1">
+          <h3 className={`font-semibold text-sm ${tc} line-clamp-2 cursor-pointer hover:underline`} onClick={e=>{e.stopPropagation();onViewRecipe(recipe.id);}}>{recipe.name}</h3>
+          <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">{recipe.kcal} kcal{cl&&<span className={`${cl.c} font-bold ml-1`}>{cl.t}</span>}</p>
+        </div>
+        <button onClick={onLock} className="p-1 hover:bg-white rounded transition">{locked?<Lock className="w-4 h-4 text-red-600" />:<Unlock className="w-4 h-4 text-gray-400" />}</button>
+      </div>
+      {isLeftover&&mealType==="lunch"&&<div className="text-xs text-gray-600 mb-2 italic">{"<-"} eelmise päeva õhtusöök</div>}
+      <button onClick={onSwap} className={`w-full text-xs font-medium py-1.5 rounded transition ${bc} hover:opacity-80`}>Vaheta</button>
+    </div>
+  );
+}
+
+function SwapPanel({options,currentRecipeId,onSelect,onClose,mealType}){
+  const [search,setSearch]=useState("");
+  const filtered=search.trim()?options.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())):options;
+  return(
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+        <div className="sticky top-0 bg-teal-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+          <h3 className="font-bold text-lg">Vali retsept</h3>
+          <button onClick={onClose} className="hover:bg-teal-700 p-1 rounded transition"><X_ className="w-6 h-6" /></button>
+        </div>
+        <div className="px-6 pt-4 pb-2">
+          <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Otsi retsepti..." autoFocus className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 transition" />
+          <p className="text-xs text-gray-400 mt-1">{filtered.length} retsepti</p>
+        </div>
+        <div className="p-6 pt-2 space-y-2 overflow-y-auto flex-1">
+          {filtered.map(r=>(
+            <button key={r.id} onClick={()=>onSelect(r.id)} className={`w-full text-left p-4 rounded-lg border-2 transition ${r.id===currentRecipeId?"bg-green-50 border-green-500":"border-gray-200 hover:border-teal-300 hover:bg-teal-50"}`}>
+              <div className="flex items-start justify-between"><div><h4 className="font-semibold text-gray-900">{r.name}</h4><p className="text-sm text-gray-600">{r.kcal} kcal - {r.prepTime} min</p></div>{r.id===currentRecipeId&&<Check className="w-5 h-5 text-green-600" />}</div>
+            </button>
+          ))}
+          {filtered.length===0&&<p className="text-center text-gray-400 py-8">Ei leidnud retsepte</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RulesPanel({rules,onToggle,onAdd,onRemove}){
+  const [newName,setNewName]=useState("");
+  const [newDesc,setNewDesc]=useState("");
+  const [showAdd,setShowAdd]=useState(false);
+  const builtin=rules.filter(r=>r.builtin);
+  const custom=rules.filter(r=>!r.builtin);
+  return(
+    <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      <div className="bg-gray-700 text-white px-6 py-4 flex items-center justify-between">
+        <span className="font-bold text-lg flex items-center gap-2"><SlidersHorizontal className="w-5 h-5" />Menüü reeglid</span>
+        <span className="text-sm bg-gray-600 px-3 py-1 rounded-full">{rules.filter(r=>r.enabled).length}/{rules.length} aktiivne</span>
+      </div>
+      <div className="p-4 space-y-3">
+        <p className="text-sm text-gray-600 mb-4">Need reeglid mõjutavad, kuidas menüü genereeritakse.</p>
+        {builtin.map(rule=>(
+          <div key={rule.id} className={`border-2 rounded-lg p-4 transition cursor-pointer ${rule.enabled?"border-teal-300 bg-teal-50":"border-gray-200 bg-gray-50 opacity-70"}`} onClick={()=>onToggle(rule.id)}>
+            <div className="flex items-center justify-between">
+              <div className="flex-1"><h3 className="font-semibold text-gray-900 text-sm">{rule.name}</h3><p className="text-xs text-gray-600 mt-1">{rule.description}</p></div>
+              <div className={`w-12 h-6 rounded-full flex items-center transition-colors ${rule.enabled?"bg-teal-500 justify-end":"bg-gray-300 justify-start"}`}><div className="w-5 h-5 bg-white rounded-full shadow mx-0.5" /></div>
+            </div>
+          </div>
+        ))}
+        {custom.length>0&&<><div className="border-t border-gray-200 pt-3 mt-3"><p className="text-xs font-semibold text-gray-500 uppercase mb-3">Sinu reeglid</p></div>
+          {custom.map(rule=>(
+            <div key={rule.id} className={`border-2 rounded-lg p-4 transition ${rule.enabled?"border-blue-300 bg-blue-50":"border-gray-200 bg-gray-50 opacity-70"}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex-1 cursor-pointer" onClick={()=>onToggle(rule.id)}><h3 className="font-semibold text-gray-900 text-sm">{rule.name}</h3><p className="text-xs text-gray-600 mt-1">{rule.description}</p></div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-12 h-6 rounded-full flex items-center transition-colors cursor-pointer ${rule.enabled?"bg-blue-500 justify-end":"bg-gray-300 justify-start"}`} onClick={()=>onToggle(rule.id)}><div className="w-5 h-5 bg-white rounded-full shadow mx-0.5" /></div>
+                  <button onClick={()=>onRemove(rule.id)} className="p-1 text-red-400 hover:text-red-600 transition"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+            </div>
+          ))}</>}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          {!showAdd?<button onClick={()=>setShowAdd(true)} className="flex items-center gap-2 text-sm font-semibold text-teal-600 hover:text-teal-800 transition"><Plus className="w-4 h-4" />Lisa uus reegel</button>
+          :<div className="space-y-3 bg-gray-50 rounded-lg p-4">
+            <input type="text" value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Reegli nimi" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            <input type="text" value={newDesc} onChange={e=>setNewDesc(e.target.value)} placeholder="Kirjeldus (valikuline)" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            <div className="flex gap-2">
+              <button onClick={()=>{if(newName.trim()){onAdd(newName.trim(),newDesc.trim());setNewName("");setNewDesc("");setShowAdd(false);}}} className="px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700 transition">Lisa</button>
+              <button onClick={()=>{setShowAdd(false);setNewName("");setNewDesc("");}} className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-300 transition">Tühista</button>
+            </div>
+          </div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WeeklyMenuView({plan,getR,getCost,dailyKcals,weeklyAvg,dateRange,budgetMode,onSwap,onViewRecipe}){
+  const dot=c=>c<=-2?"\u{1F7E2}":c>=3?"\u{1F534}":c>=1?"\u{1F7E1}":"";
+  return(
+    <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      <div className="bg-teal-700 text-white px-6 py-4 flex items-center justify-between">
+        <span className="font-bold text-lg">Nädala menüü: {dateRange}</span>
+        <span className={`text-sm px-3 py-1 rounded-full ${budgetMode==="budget"?"bg-amber-500":"bg-teal-500"}`}>{budgetMode==="budget"?"Kokkuhoid":"Tavaline"}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead><tr className="bg-gray-100 border-b border-gray-200">
+            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-28">Päev</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-amber-700">Hommikusöök</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold text-amber-700 w-16">kcal</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-blue-700">Lõunasöök</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold text-blue-700 w-16">kcal</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-orange-700">Õhtusöök</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold text-orange-700 w-16">kcal</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold text-teal-700 w-20">Kokku</th>
+          </tr></thead>
+          <tbody>
+            {DAYS_ET.map((day,i)=>{const bk=getR(plan.breakfasts[i]);const ln=getR(plan.dinners[i]);const dn=getR(plan.dinners[i+1]);return(
+              <tr key={day} className={i%2===0?"bg-white":"bg-gray-50"}>
+                <td className="px-4 py-3 font-bold text-gray-900 text-sm">{day}</td>
+                <td className="px-4 py-3 text-sm text-gray-800"><div className="flex items-center justify-between gap-1"><span>{dot(getCost(bk.id))} <span className="cursor-pointer hover:underline" onClick={()=>onViewRecipe(bk.id)}>{bk.name}</span></span><button onClick={()=>onSwap(i,"breakfast")} className="shrink-0 p-1 rounded hover:bg-amber-100 text-amber-500 hover:text-amber-700 transition"><RefreshCw className="w-3.5 h-3.5" /></button></div></td>
+                <td className="px-4 py-3 text-sm text-right text-gray-600">{bk.kcal}</td>
+                <td className="px-4 py-3 text-sm text-gray-800"><div className="flex items-center justify-between gap-1"><span>{dot(getCost(ln.id))} <span className="cursor-pointer hover:underline" onClick={()=>onViewRecipe(ln.id)}>{ln.name}</span> <span className="text-xs text-blue-400">{"<-"}</span></span><button onClick={()=>onSwap(i,"lunch")} className="shrink-0 p-1 rounded hover:bg-blue-100 text-blue-400 hover:text-blue-700 transition"><RefreshCw className="w-3.5 h-3.5" /></button></div></td>
+                <td className="px-4 py-3 text-sm text-right text-gray-600">{ln.kcal}</td>
+                <td className="px-4 py-3 text-sm text-gray-800"><div className="flex items-center justify-between gap-1"><span>{dot(getCost(dn.id))} <span className="cursor-pointer hover:underline" onClick={()=>onViewRecipe(dn.id)}>{dn.name}</span></span><button onClick={()=>onSwap(i,"dinner")} className="shrink-0 p-1 rounded hover:bg-orange-100 text-orange-400 hover:text-orange-700 transition"><RefreshCw className="w-3.5 h-3.5" /></button></div></td>
+                <td className="px-4 py-3 text-sm text-right text-gray-600">{dn.kcal}</td>
+                <td className="px-4 py-3 text-sm text-right font-bold text-teal-700">{dailyKcals[i]}</td>
+              </tr>
+            );})}
+          </tbody>
+        </table>
+      </div>
+      <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between bg-teal-50">
+        <div className="flex items-center gap-4 text-xs text-gray-600">
+          <span>{"\u{1F7E2}"} Soodne</span><span>{"\u{1F7E1}"} Keskmine</span><span>{"\u{1F534}"} Kallis</span><span>{"<-"} Eelmise päeva õhtusöök</span>
+        </div>
+        <div className="text-right"><p className="text-xs text-gray-600">Nädala keskmine</p><p className="text-2xl font-bold text-teal-700">{weeklyAvg} kcal</p></div>
+      </div>
+    </div>
+  );
+}
+
+function generateSteps(recipe,ings){
+  const n=recipe.name.toLowerCase();const s=[];const t=recipe.prepTime;
+  const h=(re)=>ings.some(i=>re.test(i.name.toLowerCase()));
+  const G=h(/riis|tatar|kinoa|bulgur|hirss|pasta|makaron/),B=h(/leib|sepik|kukkel|galett/),M=h(/hakkliha|peekon|sink|kana/);
+  const F=h(/lõhe|forell|räim|tuunikala|latikas|vürtsikilu/),T=h(/tofu|tempeh/),E=h(/muna|munavalge/);
+  const L=h(/oad|kikerherned|läätsed/),V=h(/paprika|tomat|kurk|suvikõrvits|baklažaan|porgand|sibul|šampinjon|kõrvits|spinat|herned/);
+  const D=h(/juust|feta|ricotta|kodujuust|kohupiim|hapukoor|jogurt|kohupiimakreem|kohupiimapasta/);
+  const P=h(/banaan|õun|mango|maasika|mustika|vaarika|virsik|apelsin|põldmarja/),O=h(/kaerahelbed/);
+  const c=x=>n.includes(x);
+  if(c("smuuti")||c("bowl")&&P){s.push("Pese puuviljad/marjad.","Pane blenderisse ja miksi ühtlaseks.");if(c("bowl"))s.push("Vala kaussi, lisa peale seemned ja puuviljatükid.");}
+  else if(c("puder")){O?s.push("Keeda kaerahelbed vee/piimaga pudrukonsistentsiks."):G&&s.push("Keeda tangained pakendi juhendi järgi.");E&&s.push("Lisa muna(d) ja sega.");P&&s.push("Koori ja viilutal puuviljad.");D&&s.push("Lisa piimatoode ja sega.");s.push("Serveeri toppingutega.");}
+  else if(c("omlett")){s.push("Klopi munad lahti, maitsesta.");V&&s.push("Lõika köögiviljad tükkideks.");s.push("Kuumuta pannil õli, vala munamass.");(M||F)&&s.push("Lisa liha/kala tükid peale.");s.push("Küpseta kuni alt kuldne, pealt tardunud.");B&&s.push("Röstige leib kõrvale.");}
+  else if(c("muffin")||c("kook")||c("küpsise")){s.push("Eelkuumuta ahi 180°C.");h(/jahu/)&&s.push("Sega kuivad koostisosad eraldi kausis.");E&&s.push("Klopi munad, sega märjad koostisosad kokku.");s.push("Ühenda kuiv ja märg segu ühtlaseks.");P&&s.push("Lisa puuvilja-/köögiviljatükid taignasse.");s.push("Küpseta ahjus "+Math.max(t-10,15)+" min. Lase jahtuda.");}
+  else if(c("vokk")){s.push("Lõika köögiviljad ja tofu ribadeks.");G&&s.push("Keeda riis/tangained eraldi.");s.push("Kuumuta wokipannil õli kõrgel kuumusel.");T&&s.push("Prae tofu kuldpruuniks, eemalda.");s.push("Prae köögiviljad 3-5 min.","Sega kõik kokku ja serveeri.");}
+  else if(c("pasta")||c("bolognese")){s.push("Keeda pasta soolases vees al dente.");M&&s.push("Prae hakkliha pruuniks.");T&&s.push("Purusta tofu ja prae 5 min.");V&&s.push("Lõika köögiviljad, prae 3-4 min.");h(/koor|köögikoor/)&&s.push("Lisa koor ja lase keema.");s.push("Sega pasta kastmega kokku.");}
+  else if(c("salat")){s.push("Pese ja lõika köögiviljad tükkideks.");G&&s.push("Keeda tangained, lase jahtuda.");(M||F)&&s.push("Valmista liha/kala ette.");E&&s.push("Keeda munad kõvaks (10 min), lõika.");D&&s.push("Murene juust peale.");s.push("Sega kokku ja maitsesta.");}
+  else if(c("pihv")){s.push("Purusta põhikoostisosa, sega siduvate ainetega.","Vormi pihvid.","Prae pannil mõlemalt poolt kuldpruuniks ~4 min.");V&&s.push("Valmista kõrvale salat.");}
+  else if(c("pada")||c("roog")){M&&s.push("Prae liha potis pruuniks.");s.push("Lisa sibul ja küüslauk, prae 2 min.");V&&s.push("Lisa köögiviljad, prae 5 min.");L&&s.push("Lisa oad/kikerherned ja tomatikaste.");G&&s.push("Lisa tangained ja vesi.");s.push("Hauta madalal kuumusel "+Math.max(t-10,10)+" min.");}
+  else if(c("röst")||B&&(c("praetud")||c("vaagen"))){s.push("Röstige leib kuldpruuniks.");E&&s.push("Prae/keeda munad.");s.push("Sea toppingud leivale.");D&&s.push("Lisa kodujuust/hapukoor.");}
+  else if(c("praetud")){s.push("Valmista koostisosad ette.","Kuumuta pannil õli.","Prae põhikoostisosa kuldpruuniks.");D&&s.push("Lisa kreemja koostisosa.");s.push("Serveeri soojalt.");}
+  else if(c("kreem")){D&&s.push("Vahusta koor/kreemja osa ühtlaseks.");P&&s.push("Lõika puuviljad/marjad.");s.push("Kihi kreemja osa ja puuviljad kausis.","Serveeri jahedalt.");}
+  else if(c("pasteet")){s.push("Nõruta konservoad.","Miksi blenderis siledaks.");B&&s.push("Röstige leib.");s.push("Määri leivale ja lisa toppingud.");}
+  else if(c("täidetud")){s.push("Eelkuumuta ahi 200°C.","Lõika köögivili pooleks, õõnesta.","Sega täidis kokku.","Täida ja küpseta ahjus "+Math.max(t-5,15)+" min.");}
+  else{G&&s.push("Keeda tangained pakendi juhendi järgi.");M&&s.push("Prae liha pruuniks.");F&&!h(/külmsuitsu|konserv/)&&s.push("Prae kala mõlemalt poolt ~4 min.");T&&s.push("Prae tofu kuldpruuniks.");E&&s.push("Prae/keeda munad.");V&&s.push("Lõika ja valmista köögiviljad.");L&&s.push("Nõruta ja kuumuta oad/kikerherned.");B&&s.push("Röstige leib.");D&&s.push("Lisa piimatooted.");P&&s.push("Lõika puuviljad.");if(!s.length)s.push("Valmista koostisosad ette ja sega kokku.");s.push("Serveeri ja naudi!");}
+  return s;
+}
+
+function parseRecipeIngredients(str){
+  const parts=str.split(", ");const result=[];let current=null;
+  for(const part of parts){
+    const m=part.match(/^(\d+(?:\.\d+)?)(.*?)\s+(.+)$/);
+    if(m){if(current)result.push(current);const qty=parseFloat(m[1]);const rawUnit=m[2].trim();const name=m[3].trim();const unit=UNIT_MAP[rawUnit]||rawUnit;current={name,qty,unit};}
+    else if(current){current.name+=", "+part;}
+    else{current={name:part,qty:0,unit:""};}
+  }
+  if(current)result.push(current);
+  return result.map(ing=>{
+    const isEgg=EGG_KEYWORDS.some(kw=>ing.name.toLowerCase().includes(kw));
+    if(isEgg)return{name:ing.name,qty:Math.round(ing.qty/EGG_WEIGHT),unit:"tk"};
+    if(ing.unit==="g"&&ing.qty>=1000)return{name:ing.name,qty:Math.round((ing.qty/1000)*100)/100,unit:"kg"};
+    return{name:ing.name,qty:Math.round(ing.qty*10)/10,unit:ing.unit};
+  });
+}
+
+function RecipeDetailPanel({recipe,onClose}){
+  const ings=parseRecipeIngredients(recipe.ingredients);
+  const steps=useMemo(()=>generateSteps(recipe,ings),[recipe,ings]);
+  const [eaters,setEaters]=useState({liisbeth:true,evert:true});
+  const toggleEater=name=>setEaters(p=>({...p,[name]:!p[name]}));
+  const multiplier=useMemo(()=>{
+    let m=0;
+    if(eaters.liisbeth)m+=FAMILY.find(f=>f.name==="Liisbeth").multiplier;
+    if(eaters.evert)m+=FAMILY.find(f=>f.name==="Evert").multiplier;
+    return m;
+  },[eaters]);
+  const eaterLabel=useMemo(()=>{
+    const names=[];if(eaters.liisbeth)names.push("Liisbeth");if(eaters.evert)names.push("Evert");
+    return names.length===0?"0 inimest":names.join(" + ");
+  },[eaters]);
+  return(
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col">
+        <div className="sticky top-0 bg-teal-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+          <h3 className="font-bold text-lg">{recipe.name}</h3>
+          <button onClick={onClose} className="hover:bg-teal-700 p-1 rounded transition"><X_ className="w-6 h-6" /></button>
+        </div>
+        <div className="p-6 overflow-y-auto flex-1">
+          <div className="flex flex-wrap gap-4 mb-5 text-sm">
+            <div className="bg-teal-50 px-3 py-2 rounded-lg"><span className="text-gray-500">Kalorid:</span> <span className="font-bold text-teal-700">{recipe.kcal} kcal</span></div>
+            <div className="bg-orange-50 px-3 py-2 rounded-lg"><span className="text-gray-500">Aeg:</span> <span className="font-bold text-orange-700">{recipe.prepTime} min</span></div>
+            <div className="bg-blue-50 px-3 py-2 rounded-lg"><span className="text-gray-500">Tüüp:</span> <span className="font-bold text-blue-700">{recipe.type==="main"?"Põhitoit":recipe.type==="breakfast"?"Hommikusöök":"Snäkk"}</span></div>
+          </div>
+          <div className="mb-4">
+            <div className="flex gap-3 mb-3 text-xs">
+              <span className="bg-gray-100 px-2 py-1 rounded">Valk: {recipe.protein}g</span>
+              <span className="bg-gray-100 px-2 py-1 rounded">Rasv: {recipe.fat}g</span>
+              <span className="bg-gray-100 px-2 py-1 rounded">Süsiv: {recipe.carbs}g</span>
+              <span className="bg-gray-100 px-2 py-1 rounded">Kiudaine: {recipe.fiber}g</span>
+            </div>
+          </div>
+          <div className="mb-5 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-xs font-semibold text-gray-500 mb-2">Kes sööb?</p>
+            <div className="flex gap-4">
+              {FAMILY.map(f=>(
+                <label key={f.name} className="flex items-center gap-2 cursor-pointer">
+                  <div onClick={()=>toggleEater(f.name.toLowerCase())} className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${eaters[f.name.toLowerCase()]?"bg-teal-500 border-teal-500":"border-gray-300"}`}>{eaters[f.name.toLowerCase()]&&<Check className="w-3 h-3 text-white" />}</div>
+                  <span className="text-sm font-medium text-gray-800">{f.name}</span>
+                  <span className="text-xs text-gray-400">({f.dailyKcal} kcal/p)</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          {multiplier>0?<><h4 className="font-bold text-gray-900 mb-3 text-sm">Koostisosad ({eaterLabel}):</h4>
+          <div className="space-y-2">
+            {ings.map((ing,idx)=>{
+              const mQty=typeof ing.qty==="number"?Math.round(ing.qty*multiplier*10)/10:ing.qty;
+              return(
+                <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-teal-50 border border-teal-100">
+                  <span className="text-sm text-gray-800">{ing.name}</span>
+                  <span className="text-sm font-bold text-teal-700 whitespace-nowrap ml-3">{mQty} {ing.unit}</span>
+                </div>
+              );
+            })}
+          </div></>:<p className="text-sm text-gray-400 italic">Vali vähemalt üks sööja.</p>}
+          <h4 className="font-bold text-gray-900 mb-3 mt-5 text-sm">Valmistamine:</h4>
+          <div className="space-y-2">
+            {steps.map((step,idx)=>(
+              <div key={idx} className="flex gap-3 py-2 px-3 rounded-lg bg-amber-50 border border-amber-100">
+                <span className="text-amber-600 font-bold text-sm shrink-0">{idx+1}.</span>
+                <span className="text-sm text-gray-800">{step}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SavedMenusPanel({savedMenus,onLoad,onDelete,getR,onImport,onExport}){
+  const [showImport,setShowImport]=useState(false);const [importText,setImportText]=useState("");const [copyMsg,setCopyMsg]=useState("");const [importErr,setImportErr]=useState("");
+  const handleExport=()=>{const json=onExport();navigator.clipboard.writeText(json).then(()=>{setCopyMsg("Kopeeritud!");setTimeout(()=>setCopyMsg(""),2000);}).catch(()=>{setCopyMsg("Kopeeri käsitsi");});};
+  const handleImport=()=>{if(!importText.trim()){setImportErr("Kleebi JSON siia.");return;}const ok=onImport(importText.trim());if(ok){setShowImport(false);setImportText("");setImportErr("");}else{setImportErr("Vigane JSON formaat.");}};
+  const days=["E","T","K","N","R"];
+  return(
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="bg-indigo-600 text-white px-6 py-4 flex items-center justify-between">
+          <span className="font-bold text-lg flex items-center gap-2"><BookOpen className="w-5 h-5" />Salvestatud menüüd</span>
+          <div className="flex items-center gap-2">
+            {savedMenus.length>0&&<button onClick={handleExport} className="text-sm bg-indigo-500 hover:bg-indigo-400 px-3 py-1 rounded-full transition">{copyMsg||"Ekspordi"}</button>}
+            <button onClick={()=>setShowImport(!showImport)} className="text-sm bg-indigo-500 hover:bg-indigo-400 px-3 py-1 rounded-full transition">Impordi</button>
+            <span className="text-sm bg-indigo-700 px-3 py-1 rounded-full">{savedMenus.length}</span>
+          </div>
+        </div>
+        {showImport&&<div className="p-4 bg-indigo-50 border-b border-indigo-200">
+          <p className="text-xs text-gray-600 mb-2">Kleebi varem eksporditud JSON:</p>
+          <textarea value={importText} onChange={e=>setImportText(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder='[{"id":1,"label":"...","plan":{...}}]' />
+          {importErr&&<p className="text-xs text-red-500 mt-1">{importErr}</p>}
+          <div className="flex gap-2 mt-2">
+            <button onClick={handleImport} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700">Laadi sisse</button>
+            <button onClick={()=>{setShowImport(false);setImportText("");setImportErr("");}} className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-300">Tühista</button>
+          </div>
+        </div>}
+        {savedMenus.length===0?<div className="p-12 text-center"><BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" /><p className="text-gray-500 font-medium">Salvestatud menüüsid pole</p><p className="text-gray-400 text-sm mt-2">Vajuta Salvesta nuppu või impordi eelmine menüü.</p></div>
+        :<div className="p-4 space-y-4">
+          {savedMenus.map(menu=>(
+            <div key={menu.id} className="border-2 border-gray-200 rounded-xl overflow-hidden hover:border-indigo-300 transition">
+              <div className="bg-gray-50 px-4 py-3 flex items-center justify-between">
+                <div><h3 className="font-bold text-gray-900">{menu.label}</h3><p className="text-xs text-gray-500 mt-0.5">Salvestatud: {menu.savedAt}</p></div>
+                <div className="flex items-center gap-2">
+                  <button onClick={()=>onLoad(menu.plan)} className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition"><Download className="w-4 h-4" />Laadi</button>
+                  <button onClick={()=>onDelete(menu.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash className="w-4 h-4" /></button>
+                </div>
+              </div>
+              <table className="w-full text-sm">
+                <thead><tr className="bg-gray-100 border-t border-b border-gray-200">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-8"></th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-amber-700">Hommik</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">Lõuna</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-orange-700">Õhtu</th>
+                </tr></thead>
+                <tbody>{days.map((d,i)=>{const bk=getR(menu.plan.breakfasts[i]);const ln=getR(menu.plan.dinners[i]);const dn=getR(menu.plan.dinners[i+1]);return(
+                  <tr key={i} className={i%2===0?"bg-white":"bg-gray-50"}>
+                    <td className="px-3 py-2 font-bold text-gray-700">{d}</td>
+                    <td className="px-3 py-2 text-gray-800">{bk?.name||"?"}</td>
+                    <td className="px-3 py-2 text-gray-800">{ln?.name||"?"}</td>
+                    <td className="px-3 py-2 text-gray-800">{dn?.name||"?"}</td>
+                  </tr>
+                );})}</tbody>
+              </table>
+            </div>
+          ))}
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+function ShoppingListPanel({items}){
+  const [checked,setChecked]=useState({});
+  const [extras,setExtras]=useState([]);
+  const [newItem,setNewItem]=useState("");
+  const toggle=name=>setChecked(p=>({...p,[name]:!p[name]}));
+  const allItems=[...items,...extras];
+  const checkedCount=Object.values(checked).filter(Boolean).length;
+  const cats=["Liha ja kala","Piimatooted","Puu- ja köögivili","Maiustused","Muu"];
+  const catColors={"Liha ja kala":"bg-red-100 text-red-800","Piimatooted":"bg-blue-100 text-blue-800","Puu- ja köögivili":"bg-green-100 text-green-800","Maiustused":"bg-pink-100 text-pink-800","Muu":"bg-gray-100 text-gray-800"};
+  const grouped=cats.map(cat=>({cat,items:allItems.filter(i=>i.category===cat)})).filter(g=>g.items.length>0);
+  const addExtra=()=>{if(!newItem.trim())return;setExtras(p=>[...p,{name:newItem.trim(),quantity:1,unit:"tk",meals:["käsitsi"],category:"Muu"}]);setNewItem("");};
+  const removeExtra=name=>setExtras(p=>p.filter(e=>e.name!==name));
+  return(
+    <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      <div className="bg-purple-600 text-white px-6 py-4 flex items-center justify-between">
+        <span className="font-bold text-lg">Ostunimekiri</span>
+        {checkedCount>0&&<span className="text-sm bg-purple-500 px-3 py-1 rounded-full">{checkedCount} olemas / {allItems.length-checkedCount} osta</span>}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-100 border-b border-gray-200"><tr>
+            <th className="pl-4 pr-2 py-3 w-10"></th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Koostisosa</th>
+            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Kogus</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Ühik</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Päev / Söök</th>
+          </tr></thead>
+          <tbody>
+            {grouped.map(g=>{let rowIdx=0;return(
+              <>{[<tr key={"cat-"+g.cat}><td colSpan={5} className="px-4 py-2"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${catColors[g.cat]||"bg-gray-100 text-gray-800"}`}>{g.cat} ({g.items.length})</span></td></tr>,
+              ...g.items.map(item=>{const done=!!checked[item.name];const isExtra=item.meals[0]==="käsitsi";const ri=rowIdx++;return(
+                <tr key={item.name} onClick={()=>toggle(item.name)} className={`cursor-pointer transition ${done?"bg-green-50 opacity-60":ri%2===0?"bg-white hover:bg-gray-100":"bg-gray-50 hover:bg-gray-100"}`}>
+                  <td className="pl-4 pr-2 py-3"><div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${done?"bg-green-500 border-green-500":"border-gray-300"}`}>{done&&<Check className="w-3 h-3 text-white" />}</div></td>
+                  <td className={`px-4 py-3 ${done?"line-through text-gray-400":"text-gray-900"}`}>
+                    <div className="flex items-center gap-2">{item.name}{isExtra&&<button onClick={e=>{e.stopPropagation();removeExtra(item.name);}} className="text-red-400 hover:text-red-600"><X_ className="w-3 h-3" /></button>}</div>
+                  </td>
+                  <td className={`px-4 py-3 text-right font-semibold ${done?"line-through text-gray-400":"text-gray-900"}`}>{typeof item.quantity==="number"?item.unit==="tk"?item.quantity:item.quantity.toFixed(1):item.quantity}</td>
+                  <td className={`px-4 py-3 ${done?"text-gray-400":"text-gray-700"}`}>{item.unit}</td>
+                  <td className={`px-4 py-3 text-xs ${done?"text-gray-400":"text-gray-500"}`}>{item.meals.join(", ")}</td>
+                </tr>
+              );})]}
+              </>
+            );})}
+          </tbody>
+        </table>
+      </div>
+      <div className="px-6 py-4 border-t border-gray-200">
+        <div className="flex gap-2 items-center">
+          <input type="text" value={newItem} onChange={e=>setNewItem(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addExtra();}} placeholder="Lisa toode (nt: piim, leib...)" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          <button onClick={addExtra} className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 transition"><Plus className="w-4 h-4" /></button>
+        </div>
+      </div>
+      <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 text-sm text-gray-600 flex items-center justify-between">
+        <span>Kokku {allItems.length} koostisosa (2 inimese kohta)</span>
+        {checkedCount>0&&<button onClick={()=>setChecked({})} className="text-purple-600 hover:text-purple-800 text-sm font-medium">Tühjenda valikud</button>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<MealPlanner />);
+  </script>
+</body>
+</html>
