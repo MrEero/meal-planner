@@ -912,7 +912,7 @@ function SavedMenusPanel({savedMenus,onLoad,onDelete,getR,onImport,onExport}){
 // lives at /prisma-extension/ — when installed, it drives prismamarket.ee
 // using the user's own logged-in session. Without the extension, we fall back
 // to opening search tabs for each item.
-const PRISMA_SEARCH="https://www.prismamarket.ee/search?q=";
+const PRISMA_SEARCH="https://www.prismamarket.ee/tooted?queryString=";
 function normalizeForSearch(name){return name.split(/[,(]/)[0].trim().toLowerCase();}
 function prismaUrl(name,organic){const q=normalizeForSearch(name)+(organic?" mahe":"");return PRISMA_SEARCH+encodeURIComponent(q);}
 
