@@ -270,6 +270,78 @@ function MealPlanner(){
   useEffect(()=>{if(!toast)return;const id=setTimeout(()=>setToast(null),2600);return()=>clearTimeout(id);},[toast]);
   const showToast=useCallback((message,kind="ok")=>setToast({message,kind,id:Date.now()}),[]);
 
+  // ===== Supabase sync: household, meal_plans, portions =====
+  const {user}=useAuth();
+  const [householdId,setHouseholdId]=useState(null);
+  const [hasLoadedSync,setHasLoadedSync]=useState(false);
+  const [portions,setPortions]=useState({});
+
+  const weekKey=useMemo(()=>{const m=nextMonday;const yyyy=m.getFullYear();const mm=String(m.getMonth()+1).padStart(2,"0");const dd=String(m.getDate()).padStart(2,"0");return `${yyyy}-${mm}-${dd}`;},[nextMonday]);
+
+  // Init: ensure profile + household exists
+  useEffect(()=>{
+    if(!sb||!user)return;
+    let cancelled=false;
+    (async()=>{
+      let{data:prof}=await sb.from("profiles").select("id, household_id").eq("id",user.id).maybeSingle();
+      if(!prof){const{data}=await sb.from("profiles").insert({id:user.id,display_name:user.user_metadata?.full_name||user.email}).select().maybeSingle();prof=data;}
+      if(prof&&!prof.household_id){
+        const{data:hh}=await sb.from("households").insert({name:"Perekond"}).select().single();
+        if(hh){await sb.from("profiles").update({household_id:hh.id}).eq("id",user.id);prof.household_id=hh.id;}
+      }
+      if(!cancelled&&prof)setHouseholdId(prof.household_id);
+    })();
+    return()=>{cancelled=true;};
+  },[user]);
+
+  // Load: meal plan + portions for current week
+  useEffect(()=>{
+    if(!sb||!householdId)return;
+    let cancelled=false;setHasLoadedSync(false);
+    (async()=>{
+      const{data}=await sb.from("meal_plans").select("plan_data").eq("household_id",householdId).eq("week_start",weekKey).maybeSingle();
+      if(cancelled)return;
+      if(data?.plan_data?.breakfasts)setPlan({breakfasts:data.plan_data.breakfasts,dinners:data.plan_data.dinners});
+      if(data?.plan_data?.portions)setPortions(data.plan_data.portions);else setPortions({});
+      setHasLoadedSync(true);
+    })();
+    return()=>{cancelled=true;};
+  },[householdId,weekKey]);
+
+  // Save: meal plan + portions (debounced)
+  useEffect(()=>{
+    if(!sb||!householdId||!hasLoadedSync)return;
+    const t=setTimeout(()=>{
+      sb.from("meal_plans").upsert({household_id:householdId,week_start:weekKey,plan_data:{breakfasts:plan.breakfasts,dinners:plan.dinners,portions},updated_at:new Date().toISOString()},{onConflict:"household_id,week_start"}).then(({error})=>{if(error)console.error("save plan:",error);});
+    },500);
+    return()=>clearTimeout(t);
+  },[plan,portions,householdId,weekKey,hasLoadedSync]);
+
+  // Portion helpers
+  const getPortion=useCallback((slotKey)=>{if(portions[slotKey]!=null)return portions[slotKey];if(slotKey.startsWith("dinner-"))return 2;return 1;},[portions]);
+  const togglePortion=useCallback((slotKey)=>{setPortions(p=>{const cur=p[slotKey]!=null?p[slotKey]:(slotKey.startsWith("dinner-")?2:1);return{...p,[slotKey]:cur===1?2:1};});},[]);
+
+  // Substitutions: ingredient name swaps applied at shopping list time
+  const [substitutions,setSubstitutions]=useState([]);
+  useEffect(()=>{
+    if(!sb||!householdId)return;
+    let cancelled=false;
+    (async()=>{
+      const{data}=await sb.from("substitutions").select("id,from_text,to_text").eq("household_id",householdId).order("created_at",{ascending:false});
+      if(!cancelled&&data)setSubstitutions(data);
+    })();
+    return()=>{cancelled=true;};
+  },[householdId]);
+  const applySubs=useCallback((name)=>{
+    let n=name;
+    for(const s of substitutions){
+      const safe=s.from_text.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+      try{const re=new RegExp("\\b"+safe+"\\b","gi");if(re.test(n)){n=s.to_text;break;}}
+      catch{if(n.toLowerCase().includes(s.from_text.toLowerCase())){n=s.to_text;break;}}
+    }
+    return n;
+  },[substitutions]);
+
   const pickFromPool=useCallback((pool,used)=>{const av=pool.filter(r=>!used.has(r.id));const src=av.length>0?av:pool;return src[Math.floor(Math.random()*src.length)].id;},[]);
 
   const generateNewPlan=useCallback(()=>{
@@ -317,19 +389,20 @@ function MealPlanner(){
 
   const shoppingList=useMemo(()=>{
     const all={};const NUM_PEOPLE=2;const DL=["E","T","K","N","R"];
-    const add=(recipe,mc,tag)=>{const ings=parseIngredients(recipe.ingredients);Object.entries(ings).forEach(([k,ing])=>{const sq=ing.quantity*mc*NUM_PEOPLE;if(!all[k]){all[k]={name:ing.name,quantity:sq,unit:ing.unit,meals:[]};}else{all[k].quantity+=sq;}if(!all[k].meals.includes(tag))all[k].meals.push(tag);});};
-    plan.breakfasts.forEach((id,i)=>add(getR(id),1,DL[i]+" hommik"));
-    plan.dinners.forEach((id,idx)=>{
-      if(idx===0){add(getR(id),1,DL[0]+" lõuna");}
-      else if(idx===plan.dinners.length-1){add(getR(id),1,DL[idx-1]+" õhtu");}
-      else{add(getR(id),1,DL[idx-1]+" õhtu");add(getR(id),1,DL[idx]+" lõuna");}
-    });
+    const add=(recipe,mc,tag)=>{const ings=parseIngredients(recipe.ingredients);Object.entries(ings).forEach(([k,ing])=>{const subbedName=applySubs(ing.name);const newKey=subbedName.toLowerCase();const sq=ing.quantity*mc*NUM_PEOPLE;if(!all[newKey]){all[newKey]={name:subbedName,quantity:sq,unit:ing.unit,meals:[]};}else{all[newKey].quantity+=sq;}if(!all[newKey].meals.includes(tag))all[newKey].meals.push(tag);});};
+    plan.breakfasts.forEach((id,i)=>add(getR(id),getPortion(`breakfast-${i}`),DL[i]+" hommik"));
+    // Monday lunch = fresh (dinners[0]); Tue-Fri lunches = leftover from prior evening (already covered by dinner-X portion)
+    if(plan.dinners[0])add(getR(plan.dinners[0]),getPortion("lunch-0"),DL[0]+" lõuna");
+    for(let i=0;i<5;i++){
+      const r=getR(plan.dinners[i+1]);
+      if(r)add(r,getPortion(`dinner-${i}`),DL[i]+" õhtu");
+    }
     return Object.values(all).map(ing=>{
       const isEgg=EGG_KEYWORDS.some(kw=>ing.name.toLowerCase().includes(kw));
       const f=isEgg?{qty:Math.round(ing.quantity/EGG_WEIGHT),unit:"tk"}:formatQuantity(ing.quantity,ing.unit);
       return{name:ing.name,quantity:f.qty,unit:f.unit,meals:ing.meals,category:categorize(ing.name)};
     }).sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
-  },[plan,getR]);
+  },[plan,getR,getPortion,applySubs]);
 
   const dailyKcals=useMemo(()=>{const t=[];for(let d=0;d<5;d++){t.push(getR(plan.breakfasts[d]).kcal+getR(plan.dinners[d]).kcal+getR(plan.dinners[d+1]).kcal);}return t;},[plan,getR]);
   const weeklyAvg=useMemo(()=>Math.round(dailyKcals.reduce((a,b)=>a+b,0)/5),[dailyKcals]);
@@ -349,7 +422,7 @@ function MealPlanner(){
             <div style={{fontWeight:600,letterSpacing:"-0.01em",fontSize:"15px"}}>Perekonna Toiduplaan</div>
           </div>
           <div style={{display:"flex",gap:"2px"}}>
-            {[{k:"edit",l:"Plaan"},{k:"menu",l:"Nädala tabel"},{k:"shop",l:"Ostunimekiri"},{k:"saved",l:`Ajalugu (${savedMenus.length})`},{k:"rules",l:"Seaded"}].map(t=>(
+            {[{k:"edit",l:"Plaan"},{k:"menu",l:"Nädala tabel"},{k:"shop",l:"Ostunimekiri"},{k:"saved",l:`Ajalugu (${savedMenus.length})`},{k:"asendused",l:"Asendused"},{k:"rules",l:"Seaded"}].map(t=>(
               <button key={t.k} onClick={()=>setView(t.k)} style={{padding:"8px 14px",color:view===t.k?"var(--ink)":"var(--muted)",background:view===t.k?"rgba(0,0,0,.05)":"transparent",border:"none",borderRadius:"999px",fontSize:"14px",fontWeight:500,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{t.l}</button>
             ))}
           </div>
@@ -418,10 +491,11 @@ function MealPlanner(){
           <UserBadge/>
         </div>
 
-        {view==="rules"?<><RulesPanel rules={allRules} onToggle={toggleRule} onAdd={addCustomRule} onRemove={removeCustomRule} /><ExtensionStatusCard/></>
+        {view==="rules"?<><InviteSection householdId={householdId}/><RulesPanel rules={allRules} onToggle={toggleRule} onAdd={addCustomRule} onRemove={removeCustomRule} /><ExtensionStatusCard/></>
         :view==="menu"?<WeeklyMenuView plan={plan} getR={getR} getCost={getCost} dailyKcals={dailyKcals} weeklyAvg={weeklyAvg} dateRange={dateRange} budgetMode={budgetMode} onSwap={(d,t)=>{setSwapDay(d);setSwapType(t);}} onViewRecipe={setViewRecipe} />
         :view==="saved"?<SavedMenusPanel savedMenus={savedMenus} onLoad={sp=>{loadSavedMenu(sp);setView("edit");}} onDelete={deleteSavedMenu} getR={getR} onImport={importMenus} onExport={exportMenus} />
         :view==="shop"?<ShoppingListPanel items={shoppingList} />
+        :view==="asendused"?<SubstitutionsPanel householdId={householdId}/>
         :<>
           {/* Week grid */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(220px,1fr))",gap:"14px",marginBottom:"32px"}} className="pp-week-grid">
@@ -434,13 +508,10 @@ function MealPlanner(){
                     <div className="pp-day-date">{(()=>{const d=new Date(nextMonday);d.setDate(nextMonday.getDate()+di);return `${d.getDate()}. ${["jaan","veebr","märts","apr","mai","juuni","juuli","aug","sept","okt","nov","dets"][d.getMonth()]}`;})()}</div>
                   </div>
 
-                  <MealCard recipe={getR(plan.breakfasts[di])} mealType="breakfast" cost={getCost(plan.breakfasts[di])} locked={locked[`breakfast-${di}`]} onLock={()=>toggleLock(`breakfast-${di}`)} onSwap={()=>{setSwapDay(di);setSwapType("breakfast");}} isLeftover={false} onViewRecipe={setViewRecipe} />
-                  <MealCard recipe={getR(plan.dinners[di])} mealType="lunch" cost={getCost(plan.dinners[di])} locked={locked[`lunch-${di}`]} onLock={()=>toggleLock(`lunch-${di}`)} onSwap={()=>{setSwapDay(di);setSwapType("lunch");}} isLeftover={true} onViewRecipe={setViewRecipe} />
-                  <MealCard recipe={getR(plan.dinners[di+1])} mealType="dinner" cost={getCost(plan.dinners[di+1])} locked={locked[`dinner-${di}`]} onLock={()=>toggleLock(`dinner-${di}`)} onSwap={()=>{setSwapDay(di);setSwapType("dinner");}} isLeftover={false} onViewRecipe={setViewRecipe} />
+                  <MealCard recipe={getR(plan.breakfasts[di])} mealType="breakfast" cost={getCost(plan.breakfasts[di])} locked={locked[`breakfast-${di}`]} onLock={()=>toggleLock(`breakfast-${di}`)} onSwap={()=>{setSwapDay(di);setSwapType("breakfast");}} isLeftover={false} onViewRecipe={setViewRecipe} portion={getPortion(`breakfast-${di}`)} onTogglePortion={()=>togglePortion(`breakfast-${di}`)} />
+                  <MealCard recipe={getR(plan.dinners[di])} mealType="lunch" cost={getCost(plan.dinners[di])} locked={locked[`lunch-${di}`]} onLock={()=>toggleLock(`lunch-${di}`)} onSwap={()=>{setSwapDay(di);setSwapType("lunch");}} isLeftover={di>0} onViewRecipe={setViewRecipe} portion={getPortion(`lunch-${di}`)} onTogglePortion={di===0?()=>togglePortion(`lunch-${di}`):null} />
+                  <MealCard recipe={getR(plan.dinners[di+1])} mealType="dinner" cost={getCost(plan.dinners[di+1])} locked={locked[`dinner-${di}`]} onLock={()=>toggleLock(`dinner-${di}`)} onSwap={()=>{setSwapDay(di);setSwapType("dinner");}} isLeftover={false} onViewRecipe={setViewRecipe} portion={getPortion(`dinner-${di}`)} onTogglePortion={()=>togglePortion(`dinner-${di}`)} />
 
-                  <div style={{marginTop:"auto",paddingTop:"12px",display:"flex",justifyContent:"flex-end"}}>
-                    <span className="pp-day-sum"><strong>{dailyKcals[di]}</strong> kcal</span>
-                  </div>
                 </div>
               );
             })}
@@ -486,11 +557,12 @@ function MealPlanner(){
   );
 }
 
-function MealCard({recipe,mealType,cost,locked,onLock,onSwap,isLeftover,onViewRecipe}){
+function MealCard({recipe,mealType,cost,locked,onLock,onSwap,isLeftover,onViewRecipe,portion,onTogglePortion}){
   const costClass=cost<=-2?"cheap":cost>=3?"exp":cost>=1?"mid":null;
   const costLabel=cost<=-2?"soodne":cost>=3?"kallis":cost>=1?"keskmine":null;
   const labelText=mealType==="breakfast"?"Hommikusöök":mealType==="lunch"?"Lõuna":"Õhtusöök";
   const isLunchLeftover=isLeftover&&mealType==="lunch";
+  const portionBtn=onTogglePortion?(<button onClick={onTogglePortion} className="pp-icon-btn pp-portion" title={portion===2?"Topelt portsjon (kahele päevale)":"Üks portsjon"} style={{minWidth:"28px",fontSize:"11px",fontWeight:600,fontFamily:"'Inter',sans-serif"}}>×{portion}</button>):null;
   if(isLunchLeftover){
     return(
       <div className="pp-leftover">
@@ -513,6 +585,7 @@ function MealCard({recipe,mealType,cost,locked,onLock,onSwap,isLeftover,onViewRe
           {costClass&&<span className={`pp-cost ${costClass}`} title={costLabel}><span className="cd"></span></span>}
         </span>
         <span style={{display:"inline-flex",gap:"2px"}}>
+          {portionBtn}
           <button onClick={onLock} className={`pp-icon-btn ${locked?"locked":""}`} title={locked?"Lukus":"Lukusta"}>{locked?<Lock className="w-3 h-3"/>:<Unlock className="w-3 h-3"/>}</button>
           <button onClick={onSwap} className="pp-icon-btn" title="Vaheta"><Shuffle className="w-3 h-3"/></button>
         </span>
@@ -600,6 +673,168 @@ function ExtensionStatusCard(){
             </ol>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function SubstitutionsPanel({householdId}){
+  const [subs,setSubs]=useState([]);
+  const [fromDraft,setFromDraft]=useState("");
+  const [toDraft,setToDraft]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+  const [okMsg,setOkMsg]=useState("");
+  const reload=useCallback(async()=>{
+    if(!sb||!householdId)return;
+    const{data}=await sb.from("substitutions").select("id,from_text,to_text").eq("household_id",householdId).order("created_at",{ascending:false});
+    if(data)setSubs(data);
+  },[householdId]);
+  useEffect(()=>{reload();},[reload]);
+  const addSub=async()=>{
+    setErr("");setOkMsg("");
+    const f=fromDraft.trim();const t=toDraft.trim();
+    if(!f||!t){setErr("Mõlemad väljad peavad olema täidetud");return;}
+    setBusy(true);
+    const{error}=await sb.from("substitutions").insert({household_id:householdId,from_text:f,to_text:t});
+    setBusy(false);
+    if(error){setErr(error.message);return;}
+    setFromDraft("");setToDraft("");setOkMsg("Asendus lisatud. Värskenda ostunimekirja.");
+    reload();
+  };
+  const deleteSub=async(id)=>{await sb.from("substitutions").delete().eq("id",id);reload();};
+  if(!householdId)return <div className="pp-card" style={{padding:"22px"}}><p className="pp-muted">Laen...</p></div>;
+  const COMMON=[{f:"piim",t:"kaerajook"},{f:"või",t:"oliiviõli"},{f:"juust",t:"vegan juust"},{f:"hakkliha",t:"läätsed"}];
+  const quickAdd=(pair)=>{setFromDraft(pair.f);setToDraft(pair.t);};
+  return(
+    <div className="pp-card" style={{padding:"22px"}}>
+      <h2 className="serif" style={{fontSize:"28px",fontStyle:"italic",margin:"0 0 4px",letterSpacing:"0.025em"}}>Asendused</h2>
+      <p className="pp-muted" style={{fontSize:"13px",marginTop:0,marginBottom:"20px"}}>
+        Asenda toiduainet ostunimekirjas. Näiteks "piim → kaerajook" muudab piima sisaldavad ostud kaerajoogiks. Asendused kehtivad ainult ostunimekirjas, mitte retseptide kuvamisel.
+      </p>
+
+      {subs.length>0?(
+        <div style={{marginBottom:"20px"}}>
+          <div className="pp-eyebrow" style={{marginBottom:"8px"}}>Aktiivsed asendused</div>
+          <div style={{border:"1px solid var(--line)",borderRadius:"10px",overflow:"hidden"}}>
+            {subs.map((s,i)=>(
+              <div key={s.id} style={{display:"flex",alignItems:"center",gap:"12px",padding:"12px 16px",background:"var(--surface)",borderTop:i===0?"none":"1px solid var(--line)",fontSize:"14px"}}>
+                <span style={{color:"var(--ink-2)",minWidth:"120px"}}>{s.from_text}</span>
+                <span style={{color:"var(--muted)",fontSize:"13px"}}>→</span>
+                <span style={{color:"var(--ink)",fontWeight:500,flex:1}}>{s.to_text}</span>
+                <button onClick={()=>deleteSub(s.id)} className="pp-btn pp-btn-ghost" style={{padding:"5px 10px",fontSize:"12px"}}><X_ className="w-3 h-3"/>Eemalda</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ):(
+        <div style={{padding:"20px",background:"var(--surface-2)",border:"1px dashed var(--line-strong)",borderRadius:"10px",textAlign:"center",color:"var(--muted)",fontSize:"13px",marginBottom:"20px"}}>
+          Sul pole veel asendusi. Lisa esimene allpool.
+        </div>
+      )}
+
+      <div style={{paddingTop:"16px",borderTop:"1px solid var(--line)"}}>
+        <label className="pp-eyebrow" style={{display:"block",marginBottom:"8px"}}>Lisa uus asendus</label>
+        <div style={{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
+          <input value={fromDraft} onChange={e=>setFromDraft(e.target.value)} placeholder="Asenda (nt piim)" style={{flex:"1 1 180px",padding:"10px 12px",border:"1px solid var(--line-strong)",borderRadius:"8px",fontSize:"14px",background:"var(--surface-2)",fontFamily:"inherit"}}/>
+          <span style={{color:"var(--muted)",fontWeight:600}}>→</span>
+          <input value={toDraft} onChange={e=>setToDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addSub();}} placeholder="Mille vastu (nt kaerajook)" style={{flex:"1 1 180px",padding:"10px 12px",border:"1px solid var(--line-strong)",borderRadius:"8px",fontSize:"14px",background:"var(--surface-2)",fontFamily:"inherit"}}/>
+          <button onClick={addSub} disabled={busy} className="pp-btn pp-btn-dark" style={{padding:"10px 16px",fontSize:"13px"}}><Plus className="w-3.5 h-3.5"/>{busy?"Lisan...":"Lisa"}</button>
+        </div>
+        {err&&<div style={{marginTop:"10px",color:"var(--accent-deep)",fontSize:"12px"}}>{err}</div>}
+        {okMsg&&<div style={{marginTop:"10px",color:"var(--ok)",fontSize:"12px"}}>{okMsg}</div>}
+
+        <div style={{marginTop:"18px"}}>
+          <div className="pp-eyebrow" style={{marginBottom:"6px",fontSize:"10px"}}>Kiired valikud</div>
+          <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+            {COMMON.map(p=>(
+              <button key={p.f} onClick={()=>quickAdd(p)} className="pp-btn pp-btn-outline" style={{padding:"5px 10px",fontSize:"11px"}}>{p.f} → {p.t}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InviteSection({householdId}){
+  const [members,setMembers]=useState([]);
+  const [invites,setInvites]=useState([]);
+  const [emailDraft,setEmailDraft]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  const [okMsg,setOkMsg]=useState("");
+  const reload=useCallback(async()=>{
+    if(!sb||!householdId)return;
+    const[mr,ir]=await Promise.all([
+      sb.from("profiles").select("id,display_name").eq("household_id",householdId),
+      sb.from("household_invites").select("id,invited_email,created_at").eq("household_id",householdId)
+    ]);
+    if(mr.data)setMembers(mr.data);
+    if(ir.data)setInvites(ir.data);
+  },[householdId]);
+  useEffect(()=>{reload();},[reload]);
+  const sendInvite=async()=>{
+    setError("");setOkMsg("");
+    const email=emailDraft.trim().toLowerCase();
+    if(!email||!email.includes("@")){setError("Sisesta korrektne email");return;}
+    setBusy(true);
+    const{error}=await sb.from("household_invites").insert({household_id:householdId,invited_email:email});
+    setBusy(false);
+    if(error){
+      if(error.code==="23505")setError("See email on juba kutsutud või liige");
+      else setError(error.message);
+      return;
+    }
+    setEmailDraft("");
+    setOkMsg("Kutse lisatud. Pereliige saab logida sisse Google'iga.");
+    reload();
+  };
+  const cancelInvite=async(id)=>{
+    await sb.from("household_invites").delete().eq("id",id);
+    reload();
+  };
+  if(!householdId)return null;
+  return(
+    <div className="pp-card" style={{padding:"22px",marginBottom:"16px"}}>
+      <h2 className="serif" style={{fontSize:"24px",fontStyle:"italic",margin:"0 0 4px",letterSpacing:"0.025em"}}>Pereliikmed</h2>
+      <p className="pp-muted" style={{fontSize:"13px",marginTop:0,marginBottom:"16px"}}>Kõik pereliikmed näevad sama menüüd, ostunimekirja ja Prisma järjekorda.</p>
+      <div style={{display:"flex",flexDirection:"column",gap:"6px",marginBottom:invites.length||true?"16px":"0"}}>
+        {members.map(m=>(
+          <div key={m.id} style={{display:"flex",alignItems:"center",gap:"10px",fontSize:"14px",color:"var(--ink)"}}>
+            <Users className="w-4 h-4" style={{color:"var(--muted)",flexShrink:0}}/>
+            <span>{m.display_name||"?"}</span>
+            <span className="pp-chip" style={{marginLeft:"auto",fontSize:"10px"}}>liige</span>
+          </div>
+        ))}
+      </div>
+      {invites.length>0&&(
+        <div style={{marginBottom:"16px",paddingTop:"12px",borderTop:"1px solid var(--line)"}}>
+          <div className="pp-eyebrow" style={{marginBottom:"8px"}}>Ootel kutsed</div>
+          {invites.map(inv=>(
+            <div key={inv.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0",fontSize:"13px"}}>
+              <span style={{color:"var(--muted)"}}>{inv.invited_email}</span>
+              <button onClick={()=>cancelInvite(inv.id)} className="pp-btn pp-btn-ghost" style={{padding:"4px 10px",fontSize:"12px"}}>Eemalda</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{paddingTop:"12px",borderTop:"1px solid var(--line)"}}>
+        <label className="pp-eyebrow" style={{display:"block",marginBottom:"6px"}}>Kutsu uus pereliige</label>
+        <div style={{display:"flex",gap:"8px"}}>
+          <input
+            type="email"
+            value={emailDraft}
+            onChange={e=>setEmailDraft(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter")sendInvite();}}
+            placeholder="email@example.com"
+            style={{flex:1,padding:"9px 12px",border:"1px solid var(--line-strong)",borderRadius:"8px",fontSize:"14px",background:"var(--surface-2)",fontFamily:"inherit"}}
+          />
+          <button onClick={sendInvite} disabled={busy} className="pp-btn pp-btn-dark" style={{padding:"9px 16px",fontSize:"13px"}}>{busy?"Saadan...":"Kutsu"}</button>
+        </div>
+        {error&&<div style={{marginTop:"8px",color:"var(--accent-deep)",fontSize:"12px"}}>{error}</div>}
+        {okMsg&&<div style={{marginTop:"8px",color:"var(--ok)",fontSize:"12px"}}>{okMsg}</div>}
+        <p className="pp-muted" style={{fontSize:"11px",marginTop:"10px",lineHeight:1.5}}>Pereliige logib sisse retsept.app lehel oma Google'i kontoga, kasutades sama emaili. Tema konto liitub automaatselt teie perega.</p>
       </div>
     </div>
   );
@@ -1154,7 +1389,7 @@ function LoginScreen(){
       <div style={{maxWidth:"420px",width:"100%",background:"var(--surface)",border:"1px solid var(--line)",borderRadius:"16px",padding:"40px 32px",textAlign:"center"}}>
         <div style={{fontSize:"12px",letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--muted)",marginBottom:"12px"}}>Perekonna Toiduplaan</div>
         <h1 className="serif" style={{fontSize:"40px",fontStyle:"italic",margin:"0 0 8px",letterSpacing:"0.025em",lineHeight:1.1}}>
-          Tere <em style={{fontStyle:"italic",color:"var(--accent)"}}>tagasi</em>
+          <em style={{fontStyle:"italic",color:"var(--accent)"}}>Teretulemast!</em>
         </h1>
         <p style={{color:"var(--muted)",margin:"0 0 28px",fontSize:"14px"}}>Logi sisse oma Google kontoga, et avada perekonna menüü.</p>
         <button onClick={signIn} disabled={busy} className="pp-btn pp-btn-dark" style={{width:"100%",padding:"12px 16px",fontSize:"14px",justifyContent:"center"}}>
