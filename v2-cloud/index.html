@@ -261,7 +261,7 @@ function MealPlanner(){
   const dateRange=formatDateRange(nextMonday,nextFriday);
 
   const [locked,setLocked]=useState({});
-  const [savedMenus,setSavedMenus]=useState([{id:1,label:"30.3 - 3.4.2026",savedAt:"29.03.2026 12:00",plan:{breakfasts:[52,43,64,13,34],dinners:[59,18,16,8,38,39]}}]);
+  const [savedMenus,setSavedMenus]=useState([]);
   const [view,setView]=useState("edit");
   const [swapDay,setSwapDay]=useState(null);
   const [swapType,setSwapType]=useState(null);
@@ -368,14 +368,70 @@ function MealPlanner(){
   const getCost=useCallback(id=>RECIPE_COSTS.find(r=>r.id===id)?.cost??0,[]);
   const toggleLock=useCallback(key=>setLocked(p=>({...p,[key]:!p[key]})),[]);
 
-  const saveCurrentMenu=useCallback(()=>{
-    const now=new Date();
-    setSavedMenus(p=>[{id:Date.now(),label:dateRange,savedAt:now.toLocaleDateString("et-EE")+" "+now.toLocaleTimeString("et-EE",{hour:"2-digit",minute:"2-digit"}),plan:{breakfasts:[...plan.breakfasts],dinners:[...plan.dinners]}},...p]);
+  // Load saved menus from Supabase when household is ready
+  useEffect(()=>{
+    if(!sb||!householdId)return;
+    let cancelled=false;
+    (async()=>{
+      const{data,error}=await sb.from("saved_menus").select("id,label,saved_at,plan_data").eq("household_id",householdId).order("saved_at",{ascending:false});
+      if(cancelled)return;
+      if(error){console.error("load saved_menus:",error);return;}
+      const mapped=(data||[]).map(r=>({
+        id:r.id,
+        label:r.label,
+        savedAt:new Date(r.saved_at).toLocaleDateString("et-EE")+" "+new Date(r.saved_at).toLocaleTimeString("et-EE",{hour:"2-digit",minute:"2-digit"}),
+        plan:{breakfasts:r.plan_data?.breakfasts||[],dinners:r.plan_data?.dinners||[]}
+      }));
+      setSavedMenus(mapped);
+    })();
+    return()=>{cancelled=true;};
+  },[householdId]);
+
+  const saveCurrentMenu=useCallback(async()=>{
+    if(!sb||!householdId){showToast("Pead olema sisse logitud","err");return;}
+    const planData={breakfasts:[...plan.breakfasts],dinners:[...plan.dinners]};
+    const{data,error}=await sb.from("saved_menus").insert({household_id:householdId,label:dateRange,plan_data:planData}).select("id,label,saved_at,plan_data").single();
+    if(error){console.error("save menu:",error);showToast("Salvestamine ebaõnnestus","err");return;}
+    setSavedMenus(p=>[{
+      id:data.id,
+      label:data.label,
+      savedAt:new Date(data.saved_at).toLocaleDateString("et-EE")+" "+new Date(data.saved_at).toLocaleTimeString("et-EE",{hour:"2-digit",minute:"2-digit"}),
+      plan:{breakfasts:data.plan_data?.breakfasts||[],dinners:data.plan_data?.dinners||[]}
+    },...p]);
     showToast("Menüü salvestatud");
-  },[plan,dateRange,showToast]);
+  },[plan,dateRange,showToast,householdId]);
+
   const loadSavedMenu=useCallback(sp=>{setPlan({breakfasts:[...sp.breakfasts],dinners:[...sp.dinners]});},[]);
-  const deleteSavedMenu=useCallback(id=>{setSavedMenus(p=>p.filter(m=>m.id!==id));},[]);
-  const importMenus=useCallback(json=>{try{const data=JSON.parse(json);if(Array.isArray(data)){setSavedMenus(data);return true;}return false;}catch{return false;}},[]);
+
+  const deleteSavedMenu=useCallback(async(id)=>{
+    if(!sb||!householdId)return;
+    const{error}=await sb.from("saved_menus").delete().eq("id",id);
+    if(error){console.error("delete menu:",error);showToast("Kustutamine ebaõnnestus","err");return;}
+    setSavedMenus(p=>p.filter(m=>m.id!==id));
+  },[householdId,showToast]);
+
+  const importMenus=useCallback(async(json)=>{
+    if(!sb||!householdId)return false;
+    try{
+      const data=JSON.parse(json);
+      if(!Array.isArray(data))return false;
+      const rows=data.map(m=>({household_id:householdId,label:m.label||"Imporditud",plan_data:m.plan||{breakfasts:[],dinners:[]}}));
+      if(!rows.length)return true;
+      const{error}=await sb.from("saved_menus").insert(rows);
+      if(error){console.error("import:",error);return false;}
+      // reload list
+      const r=await sb.from("saved_menus").select("id,label,saved_at,plan_data").eq("household_id",householdId).order("saved_at",{ascending:false});
+      if(r.data){
+        setSavedMenus(r.data.map(x=>({
+          id:x.id,label:x.label,
+          savedAt:new Date(x.saved_at).toLocaleDateString("et-EE")+" "+new Date(x.saved_at).toLocaleTimeString("et-EE",{hour:"2-digit",minute:"2-digit"}),
+          plan:{breakfasts:x.plan_data?.breakfasts||[],dinners:x.plan_data?.dinners||[]}
+        })));
+      }
+      return true;
+    }catch{return false;}
+  },[householdId]);
+
   const exportMenus=useCallback(()=>JSON.stringify(savedMenus),[savedMenus]);
 
   const swapMeal=useCallback(newId=>{
@@ -1182,7 +1238,7 @@ function PrismaAssistant({items,checked,onToggle,onClose,preferOrganic,setPrefer
     return()=>window.removeEventListener("message",handler);
   },[onToggle]);
   const sendToExtension=()=>{
-    const payload=items.map(i=>({name:normalizeForSearch(i.name),organic:preferOrganic}));
+    const payload=items.map(i=>({name:normalizeForSearch(i.name),organic:preferOrganic,quantity:typeof i.quantity==="number"?i.quantity:null,unit:i.unit||null}));
     window.postMessage({source:"pp-planner",type:"ADD_ITEMS",items:payload,preferOrganic},"*");
   };
   const stopExtension=()=>{
