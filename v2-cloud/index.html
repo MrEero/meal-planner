@@ -278,21 +278,23 @@ function MealPlanner(){
 
   const weekKey=useMemo(()=>{const m=nextMonday;const yyyy=m.getFullYear();const mm=String(m.getMonth()+1).padStart(2,"0");const dd=String(m.getDate()).padStart(2,"0");return `${yyyy}-${mm}-${dd}`;},[nextMonday]);
 
-  // Init: ensure profile + household exists
+  // Init: ensure profile + household exists (uses SECURITY DEFINER RPC to sidestep RLS)
+  const ensureHousehold=useCallback(async()=>{
+    if(!sb||!user)return null;
+    const{data,error}=await sb.rpc("ensure_household_for_current_user");
+    if(error){console.error("ensure_household:",error);return null;}
+    return data||null;
+  },[user]);
+
   useEffect(()=>{
     if(!sb||!user)return;
     let cancelled=false;
     (async()=>{
-      let{data:prof}=await sb.from("profiles").select("id, household_id").eq("id",user.id).maybeSingle();
-      if(!prof){const{data}=await sb.from("profiles").insert({id:user.id,display_name:user.user_metadata?.full_name||user.email}).select().maybeSingle();prof=data;}
-      if(prof&&!prof.household_id){
-        const{data:hh}=await sb.from("households").insert({name:"Perekond"}).select().single();
-        if(hh){await sb.from("profiles").update({household_id:hh.id}).eq("id",user.id);prof.household_id=hh.id;}
-      }
-      if(!cancelled&&prof)setHouseholdId(prof.household_id);
+      const hh=await ensureHousehold();
+      if(!cancelled&&hh)setHouseholdId(hh);
     })();
     return()=>{cancelled=true;};
-  },[user]);
+  },[user,ensureHousehold]);
 
   // Load: meal plan + portions for current week
   useEffect(()=>{
@@ -388,10 +390,16 @@ function MealPlanner(){
   },[householdId]);
 
   const saveCurrentMenu=useCallback(async()=>{
-    if(!sb||!householdId){showToast("Pead olema sisse logitud","err");return;}
+    if(!sb){showToast("Andmebaasi ühendus puudub","err");return;}
+    let hh=householdId;
+    if(!hh){
+      hh=await ensureHousehold();
+      if(hh)setHouseholdId(hh);
+    }
+    if(!hh){showToast("Pere loomine ebaõnnestus","err");return;}
     const planData={breakfasts:[...plan.breakfasts],dinners:[...plan.dinners]};
-    const{data,error}=await sb.from("saved_menus").insert({household_id:householdId,label:dateRange,plan_data:planData}).select("id,label,saved_at,plan_data").single();
-    if(error){console.error("save menu:",error);showToast("Salvestamine ebaõnnestus","err");return;}
+    const{data,error}=await sb.from("saved_menus").insert({household_id:hh,label:dateRange,plan_data:planData}).select("id,label,saved_at,plan_data").single();
+    if(error){console.error("save menu:",error);showToast("Salvestamine ebaõnnestus: "+(error.message||"viga"),"err");return;}
     setSavedMenus(p=>[{
       id:data.id,
       label:data.label,
@@ -399,7 +407,7 @@ function MealPlanner(){
       plan:{breakfasts:data.plan_data?.breakfasts||[],dinners:data.plan_data?.dinners||[]}
     },...p]);
     showToast("Menüü salvestatud");
-  },[plan,dateRange,showToast,householdId]);
+  },[plan,dateRange,showToast,householdId,ensureHousehold]);
 
   const loadSavedMenu=useCallback(sp=>{setPlan({breakfasts:[...sp.breakfasts],dinners:[...sp.dinners]});},[]);
 
